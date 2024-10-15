@@ -25,7 +25,7 @@ public class EnDecrypt {
     @exception Exception thrown if the inp is less/equal than 5 letters
   */
   public static String encrypt(String inp) throws Exception {
-    if (inp != null && inp.length() > 5) try {
+    if (inp != null) try {
       StringBuilder sb = new StringBuilder( );
       // your own decrypting algorithm
       return sb.toString();
