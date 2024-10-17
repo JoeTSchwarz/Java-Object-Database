@@ -12,7 +12,7 @@ public class EnDecrypt {
   */
   public static String decrypt(String inp) throws Exception {
     if (inp != null) try {
-      StringBuilder sb = new StringBuilder( );
+      StringBuilder sb = new StringBuilder(inp);
       // your own encrypting algorithm
       return sb.toString();
     } catch (Exception ex) { }
@@ -26,7 +26,7 @@ public class EnDecrypt {
   */
   public static String encrypt(String inp) throws Exception {
     if (inp != null) try {
-      StringBuilder sb = new StringBuilder( );
+      StringBuilder sb = new StringBuilder(inp);
       // your own decrypting algorithm
       return sb.toString();
     } catch (Exception ex) { }
