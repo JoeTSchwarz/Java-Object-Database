@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Class-Path: joemvc.jar joodb.jar
+Created-By: 1.0.0 (Joe T. Schwarz)
+
