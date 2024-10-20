@@ -1,0 +1,7 @@
+<frame> name=frame title="ODBServer" size=680,600 location=10,10 
+        close=true resize=false</frame>
+<tabbedpane>name=Tabbed tabs=resources/_tab1_.txt,resources/_tab2_.txt,resources/_tab3_.txt 
+        tabtext=AdminManagement,UserMaintenance,ODBMaintenance
+        size=680,600 location=0,5</tabbedpane>
+
+
