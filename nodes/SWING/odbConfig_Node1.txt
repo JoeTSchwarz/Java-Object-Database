@@ -1,0 +1,45 @@
+<!-------------------------------------------------------------------------------
+   @author Joe T. Schwarz (C)
+   this is an example (Case Sensitive)
+
+   - ODB_PATH is the root directory for all ODB
+   - LOG is the name of the logging file (abs.path)
+   - MAX_BUF is the send/receive Max Buffer
+   - USERLIST is the encrypted file of all odb users
+   - PRIMARY is the acting server
+   - NODE_X is the cluster at node X
+   - WEB_HOST/IP is the WEB name or IP of the Computer Node.
+     localhost is the web name if it's local only
+
+   Convention: Host and port must be separated by a colon (:) If IP is given
+               it must be in binary form (separator is a dot, NOT a colon (:)
+               even with IP6)
+---------------------------------------------------------------------------------
+   LOGGING: 0: NO, 1: YES
+!>
+<LOGGING>0 />
+<WEB_HOST/IP>localhost />
+<PRIMARY>9999 />
+<MAX_THREADS>10000 />
+<! CHARESET: UTF-8, UTF-16, , US_ASCII, etc. !>
+<CHARSET>ASCII />
+<!-------------------------------------------------------------------------------
+  Messaging facility for the nodes using the Multicast IP
+  The multicast datagram socket class is useful for sending and receiving IP multi-
+  cast packets. A MulticastSocket is a (UDP) DatagramSocket, with additional capa-
+  bilities for joining "groups" of other multicast hosts on the internet.
+  More about MulticastSocket: see MulticastSocket API
+  About Global Internet Multicast IP:
+     http://www.tcpipguide.com/free/t_IPMulticastAddressing.htm
+!>
+<MULTICASTING> 224.0.1.3:7777 />
+<!-------------------------------------------------------------------------------
+   working environment
+!>
+<ODB_PATH>C:/JoeApp/ODB/Nodes/oodb_Node1 />
+<LOG_PATH>c:/JoeApp/ODB/Nodes/log_Node1/ />
+<USERLIST>c:/JoeApp/ODB/Nodes/oodb_Node1/userlist />
+<JFX_CSS>C:/JoeApp/ODB/Nodes/oodb_Node1/JFX/classes/joe.css />
+<!-----------------------------------------------------------------------------!>
+
+
