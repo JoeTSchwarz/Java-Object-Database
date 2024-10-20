@@ -1,1 +1,4 @@
+Manifest-Version: 1.0
+Class-Path: joemvc.jar clientODB.jar
+Created-By: 1.0.0 (Joe T. Schwarz)
 
