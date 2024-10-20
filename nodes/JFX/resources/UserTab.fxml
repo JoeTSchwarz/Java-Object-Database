@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.geometry.*?>
+
+<AnchorPane fx:id="userPane" prefHeight="500.0" prefWidth="520.0"
+            xmlns="http://javafx.com/javafx/8"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="UserTab">
+   <children>
+      <HBox spacing="10" >
+        <padding><Insets top="10" right="10" left="5"/></padding>
+        <children>
+          <VBox spacing="5">
+             <padding><Insets top="44" right="0" left="10"/></padding>
+             <children>
+               <Button fx:id="Add" onAction="#add" text="ADD"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Change" onAction="#change" text="CHANGE PW"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Upgrade" onAction="#upgrade" text="UPGRADE"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Delete" onAction="#delete" text="DELETE"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Reset" onAction="#resetPW" text="RESET PW"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Userlist" onAction="#userlist" text="UserList"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Recover" onAction="#recover" text="RECOVER"
+                       prefHeight="50.0" prefWidth="110.0" />
+               <Button fx:id="Save" onAction="#save" text="SAVE"
+                       prefHeight="50.0" prefWidth="110.0" />
+            </children>
+          </VBox>
+          <VBox>
+            <padding><Insets top="5" right="10" left="5"/></padding>
+            <HBox spacing="52" >
+              <padding><Insets top="5" right="10" left="10"/></padding>
+              <children>
+                <Label fx:id="labID" text="User ID">
+                      <font>
+                        <Font size="15.0" />
+                      </font>
+                </Label>
+                <TextField fx:id="userID" prefHeight="10.0" prefWidth="270.0" />
+              </children>
+            </HBox>
+            <HBox spacing="5" >
+              <padding><Insets top="10" right="10" left="10"/></padding>
+              <children>
+                <Label fx:id="labPW" text="User Password">
+                      <font>
+                        <Font size="15.0" />
+                      </font>
+                </Label>
+                <PasswordField fx:id="userPW" prefHeight="10.0" prefWidth="270.0" />
+              </children>
+            </HBox>
+            <HBox spacing="5" >
+              <padding><Insets top="10" right="10" left="10" bottom="10"/></padding>
+              <children>
+                <Label fx:id="labP" text="Privilege (0:Read, 1:+Write, 2:+Delete, 3:+Superuser)">
+                      <font>
+                        <Font size="15.0" />
+                      </font>
+                </Label>
+                <TextField fx:id="priv" prefHeight="10.0" prefWidth="30.0" />
+              </children>
+            </HBox>
+            <TextArea fx:id="report"  prefHeight="350.0" prefWidth="200.0" 
+                      wrapText="true" editable="false"/>
+          </VBox>
+        </children>
+     </HBox>
+   </children>
+</AnchorPane>

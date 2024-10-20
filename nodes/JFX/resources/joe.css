@@ -1,0 +1,125 @@
+/* @author Joe T. Schwarz (C)                                    */
+.root {
+    -fx-font-size: 10pt;
+    -fx-font-family: "Times";
+    -fx-base: darkslategray;
+}
+/* .label (generic) or #aLabelName (declared @FXML name) */
+/* overwrite FXML assignment (see UserMainternance.fxml) */
+.label {
+    -fx-font-family: "Veranda";
+    -fx-text-fill: white;
+    -fx-font-size: 11pt;;
+}
+/* .text-area (generic) or #report (declared @FXML name) */
+.text-area {
+    -fx-text-fill: white;
+    -fx-background-color: red;
+    -fx-font-family: "Veranda";
+/*  -fx-font-weight: bold;  */
+    -fx-font-size: 13;
+}
+.hbox {
+    -fx-alignment: center;
+}
+.vbox {
+    -fx-alignment: center;
+}
+.button {
+    /* for details about the values: see JavaFX CSS Reference Guide */
+    -fx-background-color: linear-gradient(#f2f2f2, #d6d6d6),
+                          linear-gradient(#fcfcfc 0%, #d9d9d9 50%, #d6d6d6 100%),
+                          linear-gradient(#dddddd 0%, #f6f6f6 50%);
+    -fx-background-radius: 8,7,6;
+    -fx-background-insets: 0,1,2;
+    -fx-font-size: 14;
+    -fx-text-fill: blue;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6) , 5, 0.0 , 0 , 1 );}
+}
+.button:hover {
+    -fx-background-color: bisque;
+}
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: bisque;
+    -fx-text-fill: -fx-text-inner-color;
+}
+.combo-box .list-cell {
+    -fx-background-color: linear-gradient(#f2f2f2, #d6d6d6),
+                          linear-gradient(#fcfcfc 0%, #d9d9d9 50%, #d6d6d6 100%),
+                          linear-gradient(#dddddd 0%, #f6f6f6 50%);
+    -fx-background-radius: 8,7,6;
+    -fx-background-insets: 0,1,2;
+    -fx-font-size: 14;
+    -fx-text-fill: blue;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6) , 5, 0.0 , 0 , 1 );}
+}
+.combo-box-base:focused {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-radius: 6.4, 4, 5, 3;
+    -fx-background-insets: -1.4, 0, 1, 2;
+}
+.combo-box-base:disabled {
+    -fx-opacity: .4;
+}
+/*
+.text-field {
+  -fx-min-width: 250;
+}
+*/
+/*
+For the dialog
+Reference ist css for Dialog.getStyleClass().add("css")
+*/
+.css {
+    -fx-background-color: darkgray;
+}
+.css > *.button-bar > *.container {
+   -fx-background-color: silver;
+}
+.css .button {
+    -fx-background-color:
+        linear-gradient(#f0ff35, #a9ff00),
+        radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: #395306;
+    -fx-font-size: 11pt;
+}
+.css .button:hover {
+  -fx-background-color: bisque;
+}
+.css .text-area {
+  -fx-background-color: lightgray;
+}
+.css .text-field {
+  -fx-min-width: 250;
+}
+
+.css > *.label.content {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: blue;
+}
+.css:header *.header-panel{
+    -fx-background-color: silver;
+}
+.css:header *.header-panel *.label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: darkblue;
+    -fx-fill: #292929;
+}
+.css .check-box .box {
+  -fx-background-color: lightgray;
+  -fx-border-color:blue;
+  -fx-border-radius:3px; 
+}
+.css .check-box:selected .mark {
+  -fx-background-color: white;
+}
+.css .check-box:selected .box {
+  -fx-background-color: #28a3f4;
+}

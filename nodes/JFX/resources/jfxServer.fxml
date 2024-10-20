@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import java.net.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane fx:id="root" maxHeight="-Infinity" maxWidth="-Infinity" 
+   minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="555.0"
+   xmlns="http://javafx.com/javafx/9" 
+   xmlns:fx="http://javafx.com/fxml/1" 
+   fx:controller="JFXController">
+  <children>
+    <TabPane fx:id="tabPane"  
+         tabClosingPolicy="UNAVAILABLE">
+      <tabs>
+        <Tab fx:id="serverTab" text="AdminManagement">
+            <content>
+              <fx:include fx:id="Server" source="ServerTab.fxml" />
+            </content>
+        </Tab>
+        <Tab fx:id="userTab" text="UserMaintenance" onSelectionChanged="#event">
+            <content>
+              <fx:include fx:id="User" source="UserTab.fxml" />
+            </content>
+        </Tab>
+        <Tab fx:id="odbTab" text="ODBMaintenance" onSelectionChanged="#event">
+            <content>
+              <fx:include fx:id="ODB" source="ODBTab.fxml" />
+            </content>
+        </Tab>
+      </tabs>
+    </TabPane>
+  </children>
+  <stylesheets>
+    <URL value="@joe.css" />
+  </stylesheets>
+</AnchorPane>
