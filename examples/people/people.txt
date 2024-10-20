@@ -1,0 +1,104 @@
+Joe
+45
+San Diego
+Entrepreneur
+300000.0
+https://image.ibb.co/n9JCKR/joe3.png
+-------
+Jeff Bezos
+59
+Seattle
+Amazon Boss
+78000000000
+https://www.incimages.com/uploaded_files/image/970x450/getty_813883316_409314.jpg
+-------
+Xi Jinping
+66
+Beijing
+China's Boss
+30000.0
+https://media.cnn.com/api/v1/images/stellar/prod/171025171934-01-xi-jinping-life-gallery.jpg
+-------
+Shinzo Abe
+65
+Tokyo
+Japan PM
+207000.0
+https://en.wikipedia.org/wiki/Shinzo_Abe#/media/File:Shinzō_Abe_20120501.jpg
+-------
+Jack Ma
+60
+Hangzhou
+Alibaba Boss
+1000000.0
+https://image.cnbcfm.com/api/v1/image/105920168-1558118916458gettyimages-1149599274.jpeg
+-------
+Nguyen Xuan Phuc
+65
+Hanoi
+Vietnam PM
+10000.0
+https://cdnimgen.vietnamplus.vn/t620/uploaded/wbxx/2018_06_07/pm_nguyen_xuan_phuc.jpg
+-------
+Macron
+40
+Paris
+French President
+510000.0
+https://www.politico.eu/cdn-cgi/image/width=1280,quality=80,onerror=redirect,format=auto/wp-content/uploads/2022/02/06/GettyImages-1237856502-scaled.jpg
+-------
+Obama
+57
+Washington DC
+Former POTUS
+1000000.0
+https://image.cnbcfm.com/api/v1/image/107261156-1687459920628-gettyimages-1239961696-NUP_197508_00044.jpeg
+-------
+Putin
+65
+Moscow
+Russian President
+300000.0
+https://api.time.com/wp-content/uploads/2023/06/russia-putin-elite-disillusioned.jpeg
+-------
+Trump
+72
+Washington DC
+POTUS
+1000000.0
+https://media.cnn.com/api/v1/images/stellar/prod/230813211401-01-donald-trump-072823.jpg
+-------
+Narendra Modi
+70
+New Delhi
+PM of India
+30000
+https://upload.wikimedia.org/wikipedia/commons/9/90/PM_Modi_2015.jpg
++++++
+Elon Musk
+49
+Bel Air
+Entrepreneur
+500000
+https://s.abcnews.com/images/Business/elon-musk-file-gty-jef-220711_1657563938913_hpMain_16x9_608.jpg
+-------
+Angela Merkel
+66
+Berlin
+German Chancellor
+350000
+https://www.zdf.de/assets/angela-merkel-1048~3840x2160?cb=1654676579921aus_K%C3%B6ln-09916.jpg
+-------
+Boris Johnson
+56
+London
+PM of the UK
+206292.70
+https://images.theconversation.com/files/424337/original/file-20211003-25-1b8j7p1.jpg
+-------
+Justin Trudeau
+49
+Ottawa
+PM of Canada
+357800
+https://images.theconversation.com/files/421372/original/file-20210915-24-nltue2.jpg
