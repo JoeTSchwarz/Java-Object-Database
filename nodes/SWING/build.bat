@@ -1,4 +1,4 @@
 @echo off
 cd .\classes
-jar -cvfme ../JODBServer.jar manifest.txt JOODBServer *.class ../resources/*.txt ../icons/*.jpg > ../log.txt
+jar -cvfme ../JODBServer.jar ../resources/manifest.mf JOODBServer *.class ../resources/*.txt ../icons/*.jpg > ../log.txt
 cd ..\
