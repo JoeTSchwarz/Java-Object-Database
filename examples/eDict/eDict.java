@@ -32,16 +32,16 @@ public class eDict extends Application implements ODBEventListening {
     }
     try {
       int port = Integer.parseInt(pl.get(3));
-      dict = new eOpenDict(pl.get(0),pl.get(1), pl.get(2), port);
+      oOD = new eOpenDict(pl.get(0),pl.get(1), pl.get(2), port);
       host_port = pl.get(2)+":"+port;
-      dict.getKeys();
+      oOD.getKeys();
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(0);
     }
     This = this;
-    dict.register(this);
-    style = "style1.css";
+    oOD.register(this);
+    style = "resources/style1.css";
     stage.setTitle("Personal eVocabularyBook (c)");
     java.net.URL url = getClass().getResource(style);
     if (url != null) css = url.toExternalForm();
@@ -64,8 +64,8 @@ public class eDict extends Application implements ODBEventListening {
     htx.setPadding(new Insets(5, 100, 20, 50));
     htx.getChildren().addAll(txt);  
   
-    dict.getKeys();
-    dic = FXCollections.observableArrayList(dict.words);
+    oOD.getKeys();
+    dic = FXCollections.observableArrayList(oOD.words);
     
     lv = new ListView<String>(dic);   
     lv.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
@@ -101,11 +101,15 @@ public class eDict extends Application implements ODBEventListening {
     up.setOnAction(e -> update( ));
     MenuItem de = new MenuItem("Delete");
     de.setOnAction(e -> delete( ));
+    MenuItem msg = new MenuItem("SendMessage");
+    msg.setOnAction(e -> {
+      oOD.sendMsg(getWord("Message to JODB "+host_port));
+    });
     MenuItem lo = new MenuItem("Lock");
     lo.setOnAction(e -> {
       String word = getWord("Lock");
       if (word != null) {
-        if (dict.lock(word)) {
+        if (oOD.lock(word)) {
           txtArea.setText(word+" is locked.\n");
         } else txtArea.setText(word+" is locked or it does not exist !");
       }
@@ -114,7 +118,7 @@ public class eDict extends Application implements ODBEventListening {
     is.setOnAction(e -> {
       String word = getWord("isLocked");
       if (word != null) {
-        if (dict.isLocked(word)) {
+        if (oOD.isLocked(word)) {
           txtArea.setText(word+" is locked.\n");
         } else txtArea.setText(word+" is unlocked!");
       }
@@ -123,27 +127,27 @@ public class eDict extends Application implements ODBEventListening {
     un.setOnAction(e -> {
       String word = getWord("Unlock");
       if (word != null) {
-        if (dict.unlock(word)) {
+        if (oOD.unlock(word)) {
           txtArea.setText(word+" is unlocked.\n");
         } else txtArea.setText(word+" is locked by the other or it does not exist !");
       }
     });
     MenuItem re = new MenuItem("Refresh");
     re.setOnAction(e -> {
-      dict.getKeys();
-      if (dict.words != null && dict.words.size() > 0) dic.setAll(dict.words);
+      oOD.getKeys();
+      if (oOD.words != null && oOD.words.size() > 0) dic.setAll(oOD.words);
     });
     //
-    combo.getItems().addAll(ad, up, de, lo, is, un, re);
+    combo.getItems().addAll(ad, up, de, lo, is, un, re, msg);
     combo.setPrefHeight(40);
     combo.setStyle(bShape);
 
-    Image find = new Image(getClass().getResourceAsStream("find.png"));
+    Image find = new Image(getClass().getResourceAsStream("icons/find.png"));
     Button search = new Button("SEARCH", new ImageView(find));
     search.setOnAction(a -> searchIt());
     search.setStyle(bShape);
 
-    Image sv = new Image(getClass().getResourceAsStream("save.png"));
+    Image sv = new Image(getClass().getResourceAsStream("icons/save.png"));
     Button save = new Button("SAVE", new ImageView(sv));
     save.setOnAction(a -> saveX());
     save.setPrefWidth(100);
@@ -175,6 +179,8 @@ public class eDict extends Application implements ODBEventListening {
   // 6: addNode (handled by type 2)
   // 7: removeNode (ODBService)
   // 9: forcedClose
+  // 10: node joins cluster
+  // 11: user add/delete/update (only if ODBConnect.notify(dbName) is set)
   public void odbEvent(ODBEvent event) {
     Platform.runLater(() -> {
       String node = event.getActiveNode();
@@ -185,12 +191,12 @@ public class eDict extends Application implements ODBEventListening {
           Alert alert = new Alert(AlertType.CONFIRMATION);
           addCSS(alert);
           if (type == 0) alert.setTitle("SEVERE PROBLEM @"+host_port);
-          else alert.setTitle("SEVERE PROBLEM @"+host_port+". "+dict.dict+" was closed.");
+          else alert.setTitle("SEVERE PROBLEM @"+host_port+". "+oOD.dict+" was closed.");
           alert.setHeaderText("FAILSAFE: Switch to the NEXT Server Node, OK?");
           alert.setContentText("Your Choice");           
           Optional<ButtonType> result = alert.showAndWait();
           if (result.get() != ButtonType.OK) exit();
-          if (!dict.switchNode(event)) {
+          if (!oOD.switchNode(event)) {
             alert = new Alert(AlertType.ERROR);
             addCSS(alert);
             alert.setTitle("ALERT");
@@ -199,8 +205,8 @@ public class eDict extends Application implements ODBEventListening {
             alert.showAndWait();
             exit();
           }
-          dict.register(This);
-          host_port = dict.getActiveNode();
+          oOD.register(This);
+          host_port = oOD.getActiveNode();
           if (type != 0) txtArea.setText("On "+node+": "+msg+" was forced to close.\n");
           txtArea.appendText("Switch to "+host_port+"\nKeyList AutoRefresh.\n");
         }
@@ -211,17 +217,28 @@ public class eDict extends Application implements ODBEventListening {
         txtArea.setText("On local "+node+": "+msg+"\n");
       } else if (type == 7 && !host_port.equals(node)) { // addNode or removeNode
         refresh(node+" is removed from cluster.");
-      } else if (type == 9 && msg.equals(dict.dict)) { // forcedClose
+      } else if (type == 9 && msg.equals(oOD.dict)) { // forcedClose
         refresh(msg+" on "+node+" is forced to close by Superuser.");
+      } else if (type == 10) { // addNode/joinNode
+        refresh(msg+" joins Cluster.");
+      } else if (type == 11) { // user add/delete/update
+        int p = node.indexOf("|"); // uID|dbName
+        if (p < 0) return;
+        if (!oOD.getUserID().equals(node.substring(0, p)) && oOD.dict.equals(node.substring(p+1))) {
+          refresh(msg);
+        }
       }
     });
   }
   //
   private void refresh(String msg) {
-    dict.getKeys();
-    if (dict.words != null && dict.words.size() > 0) {
-      dic.setAll(dict.words);
+    oOD.getKeys();
+    if (oOD.words.size() > 0) {
+      dic.setAll(oOD.words);
       txtArea.setText(msg+"\nKeyList AutoUpdate.\n");
+    } else {
+      dic.clear();
+      txtArea.setText(msg+"\nKeyList is empty.\n");
     }
   }
   //
@@ -235,47 +252,45 @@ public class eDict extends Application implements ODBEventListening {
   }
   // ---------------------------------------------------------------------------
   private void addWord( ) {
-    edict = new eParms();
-    eDialog ed = new eDialog(edict, "AddWord", true);
-    if (edict.word != null && edict.word.length() > 0 && edict.mean.length() > 0) {
-      txtArea.setText(edict.word+":\n"+edict.mean);
-      dict.keep(edict.word, edict.mean);
-      dict.getKeys();
-      if (dict.words != null && dict.words.size() > 0) dic.setAll(dict.words);
-    }
+    String[] s = eDialog.dialog("AddWord", null, null, true);
+    if (s == null) return;
+    txtArea.setText(s[0]+":\n"+s[1]);
+    oOD.add(s[0], s[1]);
+    oOD.getKeys();
+    dic.setAll(oOD.words);
   }
   private void update( ) {
-    edict = new eParms();
-    edict.word = getWord("Update");
-    if (edict.word != null) {
-      if (dict.isLocked(edict.word) && !dict.unlock(edict.word)) {
-        txtArea.setText(edict.word+" is UNKNOWN or LOCKED");
-        return;
-      }
-      edict.mean = dict.getMeaning(edict.word);
-      eDialog ed = new eDialog(edict, "Update", false);
-      if (edict.mean != null && edict.word.length() > 0 && edict.mean.length() > 0) {
-        if (dict.update(edict.word, edict.mean)) {
-          dict.getKeys();
-          if (dict.words != null && dict.words.size() > 0) dic.setAll(dict.words);
-          txtArea.setText(edict.word+" is updated.\n"+edict.mean);
-        } else txtArea.setText("Unanble to update "+edict.word);
-      }
+    String key = getWord("Update word");
+    if (key == null) return;
+    String m = oOD.read(key);
+    if (m == null) {
+      txtArea.setText(key+" is UNKNOWN or LOCKED");
+      return;
     }
+    if (oOD.isLocked(key)) {
+      txtArea.setText(key+" is LOCKED");
+      return;
+    }
+    String[] s = eDialog.dialog("Update", key, m, false);
+    if (s == null) return;
+    if (oOD.update(key, s[1])) {
+      oOD.getKeys();
+      dic.setAll(oOD.words);
+      txtArea.setText(key+" is updated.\n"+s[1]);
+    } else txtArea.setText("Unable to update "+key);
   }
   private void delete( ) {
-    String word = getWord("Delete");
-    if (word != null) {
-      if (dict.isLocked(word) && !dict.unlock(word)) {
-        txtArea.setText(word+" is UNKNOWN or LOCKED");
+    String key = getWord("Delete word");
+    if (key != null) {
+      if (oOD.isLocked(key)) {
+        txtArea.setText(key+" is LOCKED");
         return;
       }
-      if (dict.delete(word)) {
-        dic.remove(word);
-        txtArea.setText(word+" is deleted.\n");
-        dict.getKeys();
-        if (dict.words != null && dict.words.size() > 0) dic.setAll(dict.words);
-      } else txtArea.setText(word+" is locked or does not exist !");
+      if (oOD.delete(key)) {
+        txtArea.setText(key+" is deleted.\n");
+        oOD.getKeys();
+        dic.setAll(oOD.words);
+      } else txtArea.setText(key+" is locked or does not exist !");
     }
   }
   // LowerCase ONLY
@@ -283,10 +298,10 @@ public class eDict extends Application implements ODBEventListening {
     TextInputDialog dialog = new TextInputDialog( );
     dialog.setTitle("Joe's eDict");
     dialog.setHeaderText(hdr);
-    dialog.setContentText(hdr+" Word");
+    dialog.setContentText(hdr);
     Optional<String> inp = dialog.showAndWait();
     if (inp.isPresent()) {
-      String s = inp.get().trim().toLowerCase();
+      String s = inp.get().trim();
       if (s.length() > 0) return s;
     }
     return null;
@@ -294,40 +309,34 @@ public class eDict extends Application implements ODBEventListening {
   private void searchIt() {
     String word = getWord("Search");
     if (word != null) {
-      String res = dict.search(word);
-      if (res != null) {
-        txtArea.setText(word+":\n"+res);
-      } else txtArea.setText(word+" does not exist !");
+      String m = oOD.search(word);
+      if (m != null) txtArea.setText(word+":\n"+m);
+      else txtArea.setText(word+" does not exist !");
     }
   }
   private void saveX() {
-    dict.save();
+    oOD.save();
   }
   public void chkItem( ) {
     try {
-      String word = lv.getSelectionModel().getSelectedItem().toLowerCase();
-      txtArea.setText(dict.getMeaning(word));
+      String word = lv.getSelectionModel().getSelectedItem();
+      txtArea.setText(oOD.read(word));
     } catch (Exception ex) { }
   }
   private void exit() {
-    dict.exit();
+    oOD.exit();
     Platform.exit();
     System.exit(0);
   }
-  private byte[] rb;
   private HBox hbox;
   private eDict This;
-  private eParms edict;
-  private eOpenDict dict;
+  private eOpenDict oOD;
   private TextField trans;
   private TextArea txtArea;
   private ListView<String> lv;
-  private ArrayList<String> keys;
+  private ObservableList<String> dic;
   private String css, style, host_port;
-  private ObservableList<String> dic, cob;
-  // Google's Root or this Root http://www.oxfordlearnersdictionaries.com...
-  private String ggl = "http://ssl.gstatic.com/dictionary/static/sounds/de/0/";
-  private String url = "http://www.oxfordlearnersdictionaries.com/media/english/us_pron/";
+  //
   private String bShape = "-fx-background-color: linear-gradient(#f2f2f2, #d6d6d6),"+
         "linear-gradient(#fcfcfc 0%, #d9d9d9 50%, #d6d6d6 100%),"+
         "linear-gradient(#dddddd 0%, #f6f6f6 50%);\n"+

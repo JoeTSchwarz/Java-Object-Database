@@ -10,11 +10,14 @@ public class eOpenDict {
     this.pw = pw;
     this.uid = uid;
     odbc = new ODBConnect(host, port, pw, uid);
+    csName = odbc.charsetNameOf("Tiếng Việt");
+    odbc.connect(dict, csName);
     odbc.connect(dict);
     if (!odbc.autoCommit(true)) {
       System.out.println("Unable to set autoCommit() to Server");
       System.exit(0);
     }
+    odbc.notify(dict, true);
     sort(odbc.getKeys(dict));
   }
   // fail-safe
@@ -38,9 +41,15 @@ public class eOpenDict {
   public String getActiveNode() {
     return activeNode;
   }
+  public String getUserID() {
+    return odbc.getID();
+  }
   public void getKeys( ) {  
     sort(odbc.getKeys(dict));
   }
+  public void sendMsg(String msg) {  
+    odbc.sendMsg(odbc.getID()+": "+msg);
+  }  
   public String search(String key) {
     try {
       for (String k:words) if (k.equals(key)) return (String) odbc.read(dict, key);
@@ -77,19 +86,20 @@ public class eOpenDict {
     } catch (Exception ex) { }
     return false;
   }
-  public void keep(String key, String meaning) {
+  public void add(String key, String meaning) {
     try {
       odbc.add(dict, key, meaning);
-      odbc.commit(dict, key);
       done = true;
     } catch (Exception ex) {
       done = false;
     }
   }
-  public String getMeaning(String key) {
+  public String read(String key) {
     done = true;
     try {
-      return (String) odbc.read(dict, key);
+      Object obj = odbc.read(dict, key);
+      if (obj instanceof String) return (String)obj;
+      return new String((byte[])obj, csName);
     } catch (Exception ex) { }
     done = false;
     return "Can't read. Probably "+key+" is locked.";
@@ -108,16 +118,17 @@ public class eOpenDict {
     return done;
   }
   //
-  public String dict = "eDict";
-  public ArrayList<String> words;
+  public String dict = "vdDict";
+  public List<String> words;
   //
   private void sort(List<Object> lst) {
-    if (lst == null) return;
     words = new ArrayList<>(lst.size());
-    for (Object obj : lst) words.add((String)obj);
-    Collections.sort(words);
+    if (lst != null) {
+      for (Object obj : lst) words.add((String)obj);
+      Collections.sort(words);
+    }
   }
   private boolean done;
   private ODBConnect odbc;
-  private String pw, uid, activeNode;
+  private String pw, uid, activeNode, csName;
 }
