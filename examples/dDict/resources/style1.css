@@ -1,1 +1,70 @@
-aaa
+/* 
+    Document   : controlStyle1
+    @author Joe T. Schwarz (c)
+*/
+
+.root{
+    -fx-font-size: 11pt;
+    -fx-font-family: "Tahoma";
+    -fx-base: #DFB951; /*e.g. for scrollbar */
+    -fx-focus-color: #FF0000; /* RED for border of TextArea, etc.*/
+}
+
+.button{
+    -fx-text-fill: #006464;
+    -fx-background-color: #DFB951;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-padding: 5;
+}
+
+/* for MenuButton, ComboBox, etc. */
+.label {
+    -fx-font-family: Veranda;
+    -fx-font-weight: bold;
+    -fx-font-size: 15;
+}
+
+.slider{
+    -fx-border-color: white;
+    -fx-border-style: dashed;
+    -fx-border-width: 2;
+}
+/*
+For the dialog
+Reference ist css for Dialog.getStyleClass().add("css")
+*/
+.popup {
+    -fx-background-color: pink;
+}
+.popup > *.button-bar > *.container {
+   -fx-background-color: silver;
+}
+.popup .button {
+    -fx-text-fill: #006464;
+    -fx-background-color: #DFB951;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-padding: 5;
+}
+.popup .button:hover {
+  -fx-background-color: bisque;
+}
+.popup .text-field {
+  -fx-min-width: 250;
+}
+
+.popup > *.label.content {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: blue;
+}
+.popup:header *.header-panel{
+    -fx-background-color: silver;
+}
+.popup:header *.header-panel *.label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: darkblue;
+    -fx-fill: #292929;
+}
