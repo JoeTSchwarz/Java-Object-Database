@@ -1,0 +1,10 @@
+<panel> name=Pane1_3 size=680,500 location=0,0 </panel>
+<button>name=fclose text=ForcedClose size=140,60 location=10,13</button>
+<button>name=frollb text=ForcedRollback size=140,60 location=10,73</button>
+<button>name=frollK text=ForcedRollbackKey size=140,60 location=10,133</button>
+<button>name=ffree text=ForcedFreeKeys size=140,60 location=10,193</button>
+<button>name=ffreeK text=ForcedFreeKey size=140,60 location=10,253</button>
+<button>name=addC text=AddNode size=140,60 location=10,313</button>
+<button>name=remC text=RemoveNode size=140,60 location=10,373</button>
+<button>name=killC text=RemoveClient size=140,60 location=10,433</button>
+<textarea>name=area3 color=lightgray size=500,500 location=160,5</textarea>
