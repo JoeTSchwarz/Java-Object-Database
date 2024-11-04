@@ -1,0 +1,23 @@
+<frame> name=frame title="The People" size=690,660 location=100,40  close=false resize=false</frame>
+<label>name=lab1 text="Report Area" size=100,20 location=185,10 </label>
+<textarea>name=area size=450,565 location=185,30 edit=false color=lightgray</textarea>
+<button>name=connect text="LOGIN & CONNECT" size=170,30 location=10,10 color=green</button>
+<button>name=add text=ADD size=170,30 location=10,40</button>
+<button>name=del text=DELETE size=170,30 location=10,70</button>
+<button>name=read text=READ size=170,30 location=10,100</button>
+<button>name=update text=UPDATE size=170,30 location=10,130</button>
+<button>name=lock text=LOCK size=170,30 location=10,160</button>
+<button>name=unlock text=UNLOCK size=170,30 location=10,190</button>
+<button>name=list text="LIST NAMES" size=170,30 location=10,220</button>
+<button>name=xaction text=TRANSACTION size=170,30 location=10,250</button>
+<button>name=select_1 text="Select(db,pat)" size=170,30 location=10,280</button>
+<button>name=select_2 text="Select(db,var,pat)" size=170,30 location=10,310</button>
+<button>name=select_3 text="Select(db,var,?,pat)" size=170,30 location=10,340</button>
+<button>name=select_4 text="SQL(db,sqlString)" size=170,30 location=10,370</button>
+<button>name=FieldNames text="FieldNames(ObjName)" size=170,30 location=10,400</button>
+<button>name=isExisted text=isExisted size=170,30 location=10,430</button>
+<button>name=isLocked text=isLocked size=170,30 location=10,460</button>
+<button>name=rollback text=ROLLBACK size=170,30 location=10,490</button>
+<button>name=commit text=COMMIT size=170,30 location=10,520</button>
+<button>name=commitAll text="COMMIT ALL" size=170,30 location=10,550</button>
+<button>name=exit text="DISCONNECT & EXIT" size=170,30 location=10,580 color=red</button>
