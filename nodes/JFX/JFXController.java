@@ -32,16 +32,19 @@ public class JFXController implements Initializable {
       model.select(0);
       return;
     }
+    // return ret[0]: userID, ret[1]: password
     String[] aut = jfx.login("Superuser Authentication");
-    if (aut[0].length() == 0 || aut[1].length() == 0) {
+    suID = aut[0]; suPW = aut[1];
+    if (suID.length() == 0 || suPW.length() == 0) {
       model.select(0);
       return;
     }
-    if (!uList.isSuperuser(aut[1], aut[0])) {
+    if (!uList.isSuperuser(suPW, suID)) {
       jfx.warning("You must be Superuser to open this Tab");
       model.select(0);
       return;
     }
+    if (model.getSelectedIndex() == 1) UserController.superuser(aut[0], aut[1]);
   }
   // call back from ODBServer
   /**
@@ -70,8 +73,10 @@ public class JFXController implements Initializable {
     UserController.loadParm(prop, uList);
   }
   //
+  protected static JFXOptions jfx;
+  protected static String suPW, suID;
+  //
   private UserList uList;
-  public static JFXOptions jfx;
   private ODBService odbService;
   private SingleSelectionModel<Tab> model;
 }

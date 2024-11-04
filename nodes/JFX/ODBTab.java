@@ -29,8 +29,10 @@ public class ODBTab implements Initializable {
   @FXML private void fClose() {
     String dbName = JFXController.jfx.input("ForcedClose ODB (local node only)");
     if (dbName != null && dbName.length() > 0) try {
-      if (odbService.forcedClose(dbName)) report.appendText(dbName+" is forced to close.\n");
-      else report.appendText("Unknown:"+dbName+".\n");
+      if (odbService.forcedClose(dbName)) {
+        report.appendText(dbName+" is forced to close.\n");
+        parms.logging(dbName+" is forced to close by Superuser "+JFXController.suID);
+      } else report.appendText("Unknown:"+dbName+".\n");
     } catch (Exception ex) {
       report.appendText("ForcedClose "+dbName+":"+ex.toString()+".\n");
     }
@@ -40,8 +42,10 @@ public class ODBTab implements Initializable {
     if (dbName != null && dbName.length() > 0) {
       List<String> list = odbService.lockedKeyList(dbName);
       if (list.size() > 0) try {
-        if (odbService.forcedRollback(dbName)) report.appendText(dbName+" is forced to rollback.\n");
-        else report.appendText("Unable to rollback "+dbName+".\n");
+        if (odbService.forcedRollback(dbName)) {
+          report.appendText(dbName+" is forced to rollback.\n");
+          parms.logging(dbName+" is forced to rollback by Superuser "+JFXController.suID);
+        } else report.appendText("Unable to rollback "+dbName+".\n");
       } catch (Exception ex) {
         report.appendText("ForcedRollback "+dbName+":"+ex.toString()+".\n");
       }
@@ -55,8 +59,10 @@ public class ODBTab implements Initializable {
       if (list.size() > 0) {
         String key = JFXController.jfx.choice("ForcedRollnackKey", "Choose a key", list);
         if (key != null && key.length() > 0) try {
-          if (odbService.forcedRollbackKey(dbName, key)) report.appendText(key+" of "+dbName+" is rollbacked.\n");
-          else report.appendText("Unable to rollback "+key+" of "+dbName+"\n");
+          if (odbService.forcedRollbackKey(dbName, key)) {
+            report.appendText(key+" of "+dbName+" is rollbacked.\n");
+            parms.logging(key.substring(1)+" of "+dbName+" is rollbacked by Superuser "+JFXController.suID);
+          } else report.appendText("Unable to rollback "+key+" of "+dbName+"\n");
         } catch (Exception ex) {
           report.appendText("ForcedRollbackKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
         }
@@ -68,8 +74,10 @@ public class ODBTab implements Initializable {
     if (dbName != null && dbName.length() > 0) {
       List<String> list = odbService.lockedKeyList(dbName);
       if (list.size() > 0) try {
-          if (odbService.forcedFreeKeys(dbName)) report.appendText("All keys of "+dbName+" are freed.\n");
-          else report.appendText("Unable to free all keys of "+dbName+".\n");
+          if (odbService.forcedFreeKeys(dbName)) {
+            report.appendText("All keys of "+dbName+" are freed.\n");
+            parms.logging("All keys of "+dbName+" are freed by Superuser "+JFXController.suID);
+          } else report.appendText("Unable to free all keys of "+dbName+".\n");
       } catch (Exception ex) {
         report.appendText("ForcedFreeKeys "+dbName+":"+ex.toString()+".\n");
       }
@@ -83,8 +91,10 @@ public class ODBTab implements Initializable {
       if (list.size() > 0) {
         String key = JFXController.jfx.choice("ForcedFreeKey","Choose a key", list);
         if (key != null && key.length() > 0) try {
-          if (odbService.forcedFreeKey(dbName, key)) report.appendText(key+" of "+dbName+" is freed.\n");
-          else report.appendText("Unable to free "+key+" of "+dbName+"\n");
+          if (odbService.forcedFreeKey(dbName, key)) {
+            report.appendText(key+" of "+dbName+" is freed.\n");
+            parms.logging(key.substring(1)+" of "+dbName+" is freed by Superuser "+JFXController.suID);
+          } else report.appendText("Unable to free "+key+" of "+dbName+"\n");
         } catch (Exception ex) {
           report.appendText("ForcedFreeKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
         }
@@ -122,6 +132,7 @@ public class ODBTab implements Initializable {
   */
   public void setParm(ODBService odbService) {
     this.odbService = odbService;
+    parms = odbService.getODBParms();
   }
   /**
   setNode
@@ -132,5 +143,6 @@ public class ODBTab implements Initializable {
   }
   //
   private String webHost;
+  private ODBParms parms;
   private ODBService odbService;
 }

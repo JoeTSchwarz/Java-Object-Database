@@ -63,13 +63,11 @@ public class ServerTab implements Initializable, ODBEventListening {
   }
   @FXML private void logEnable() {
     if (odbService == null) return;
-    else {
-      String[] aut = JFXController.jfx.login("Superuser Authentication");
-      if (aut[0] == null || aut[1] == null || !uList.isSuperuser(aut[1], aut[0])) {
-        report.appendText("Illegally try to change LOG mode.\n");
-        return;
-      }
-    } 
+    String[] aut = JFXController.jfx.login("Superuser Authentication");
+    if (aut[0] == null || aut[1] == null || !uList.isSuperuser(aut[1], aut[0])) {
+      report.appendText("Illegally try to change LOG mode.\n");
+      return;
+    }
     logOn = !logOn;
     if (logOn) LogEnable.setText("LOG Disable");
     else LogEnable.setText("LOG Enable");
@@ -149,8 +147,9 @@ public class ServerTab implements Initializable, ODBEventListening {
   public void odbEvent(ODBEvent e) {
     Platform.runLater(() -> {
       String node = e.getActiveNode();
-      if (node.equals(webHost)) return;
       int type = e.getEventType();
+      if (type != 12 && node.equals(webHost)) return;
+      //
       switch (type) {
         case 0:
           report.appendText(node+" is DOWN\n");
@@ -191,9 +190,14 @@ public class ServerTab implements Initializable, ODBEventListening {
           report.appendText(node+": "+e.getMessage()+" was forced to close.\n");
           return;
         case 10: // reply from online server
-          if (nodes.contains(node) || !node.equals(e.getMessage())) return;
-          report.appendText(node+" is ONLINE\n");
-          nodes.add(node);
+          if (!nodes.contains(node) && webHost.equals(e.getMessage())) {
+            report.appendText(node+" is ONLINE\n");
+            nodes.add(node);
+          } else return;
+          break;
+        case 12:
+          report.appendText(e.getMessage());
+          return;
       }
       PingNode.setItems(FXCollections.observableArrayList(nodes));
     });
@@ -221,7 +225,10 @@ public class ServerTab implements Initializable, ODBEventListening {
     this.config = config;
     this.ODBController = ODBController;
     this.jfxController = jfxController;
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
+    logOn = prop.get("LOGGING").charAt(0) == '1';
+    if (logOn) LogEnable.setText("LOG Disable");
+    else LogEnable.setText("LOG Enable");
+    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PORT");
     PingNode.setButtonCell(new ListCell<>() {
       @Override // set prompt text if empty or 0 item
       protected void updateItem(String item, boolean empty) {
@@ -246,5 +253,5 @@ public class ServerTab implements Initializable, ODBEventListening {
   private JFXController jfxController;
   private HashMap<String, String> prop;
   private ArrayList<String> nodes = new ArrayList<String>();
-  private static boolean registered = false, mod = false, logOn = false;
+  private static boolean registered = false, mod = false, logOn;
 }

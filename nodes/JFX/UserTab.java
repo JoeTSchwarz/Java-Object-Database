@@ -41,18 +41,26 @@ public class UserTab implements Initializable {
       Add.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Fields with RED label then \n"+
                      "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n"+
+                     "No semicolon (:) or at (@) in PW and ID\n"+
                      "Min. 3 letters for uID and min. 4 for Password\n");
       return;
     }
     String uID = userID.getText();
-    String uPW = userPW.getText(); 
-    int pri = Integer.parseInt(priv.getText()); 
-    if (pri < 0|| pri > 3|| uID == null|| uID.length() == 0 || uPW == null|| uPW.length() == 0) {
-      report.appendText("Invalid Privilege:"+pri+" (Privilege: 0. 1, 2, 3) or UserID or UserPW. NO add.\n");
-    } else {
-      if (uList.addUser(uPW, uID, pri)) {
-        report.appendText("User "+uID+" is added.\n");
-      } else report.appendText("Unable to add User "+uID+"\n");
+    if (uID != null && uID.trim().length() >= 3) {
+      report.clear();
+      String uPW = userPW.getText();
+      if (uPW == null|| uPW.trim().length() < 4) {
+        report.appendText("Invalid UserPW. NO add.\n");
+      } else if (uList.isValid(uPW, uID) && !uList.isExisted(uID)) {
+        int pri = Integer.parseInt( priv.getText()); 
+        if (uList.addUser(uPW, uID, pri)) {
+          report.appendText("User "+uID+" is added.\n");
+        } else report.appendText("Unable to add User "+uID+"\n");
+      } else {
+        if (uList.isExisted(uID)) report.appendText(uID+" existed already.\n");
+        else report.appendText("Password or userID contains invalid charater : or @\n");
+      }
     }
     Add.setText("ADD");
     Add.setStyle("-fx-text-fill: blue;");
@@ -72,19 +80,23 @@ public class UserTab implements Initializable {
       labPW.setTextFill(Color.RED);
       Change.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Fields with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "No semicolon (:) or at (@) in PW\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     String uID = userID.getText();
-    String uPW = userPW.getText(); 
-    String oPW = JFXController.jfx.password("Old Password");
-    if (uID == null || uID.length() == 0 || uPW == null ||
-        uPW.length() == 0 || oPW == null || oPW.length() == 0) {
-      report.appendText("Invalid Inputs\n");
-    } else {
-      if (uList.changePassword(uID, oPW, uPW)) {
-        report.appendText("Password of user "+uID+" is updated.\n");
-      } else report.appendText("Unable to upgrade User "+uID+"\n");
+    if (uID != null && uID.trim().length() >= 3) {
+      report.clear();
+      String uPW = userPW.getText(); 
+      String oPW = JFXController.jfx.password("Old Password");
+      if (uPW == null || uPW.trim().length() < 4 || oPW == null || oPW.trim().length() < 4) {
+        report.appendText("Invalid Inputs\n");
+      } else if (uList.isValid(uPW, uID) && uList.isValid(oPW)) {
+        if (uList.changePassword(uID, oPW, uPW)) {
+          report.appendText("Password of user "+uID+" is updated.\n");
+        } else report.appendText("Unable to upgrade User "+uID+"\n");
+      } else report.appendText("Password contains invalid charater : or + or @\n");
     }
     Change.setText("CHANGE PW");
     Change.setStyle("-fx-text-fill: blue;");
@@ -103,14 +115,14 @@ public class UserTab implements Initializable {
       labID.setTextFill(Color.RED);
       Upgrade.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Fields with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     String uID = userID.getText();
-    int pri = Integer.parseInt(priv.getText()); 
-    if (pri < 0 || pri > 3 || uID == null || uID.length() == 0 ) {
-      report.appendText("Invalid Privilege:"+pri+" (Privilege: 0. 1, 2, 3) or UserID or UserPW. NO add.\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.clear();
+      int pri = Integer.parseInt(priv.getText()); 
       if (uList.upgradePrivilege(suPW, suID, uID, pri)) {
         report.appendText("Privilege of user "+uID+" is upgraded.\n");
       } else report.appendText("Unable to upgrade User "+uID+"\n");
@@ -129,13 +141,13 @@ public class UserTab implements Initializable {
       labID.setTextFill(Color.RED);
       Delete.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Field with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     String uID = userID.getText();
-    if (uID == null || uID.length() == 0) {
-      report.appendText("Invalid UserID or UserPW. NO delete.\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.clear();
       if (uList.deleteUser(uID)) {
         report.appendText("User "+uID+" is deleted.\n");
       } else report.appendText("Unable to delete User "+uID+"\n");
@@ -154,24 +166,22 @@ public class UserTab implements Initializable {
       labID.setTextFill(Color.RED);
       Reset.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Field with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     String uID = userID.getText();
-    if (uID == null || uID.length() == 0) {
-      report.appendText("Invalid Input\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.clear();
       String pw = uList.resetPassword(uID);
-      if (pw != null) {
-        report.appendText("Password of user "+uID+" is now: "+pw+"\n");
-      } else report.appendText("Unable to reset PW for User "+uID+"\n");
+      report.appendText("Password of user "+uID+" is now: "+pw+"\n");
     }
     Reset.setText("RESET PW");
     Reset.setStyle("-fx-text-fill: blue;");
     reset();
   }
   @FXML private void userlist() {
-    ArrayList<String> lst = uList.getUserList(suPW, suID);
+    ArrayList<String> lst = uList.getUserList(suPW, suID);  
     if (lst.size() > 0) {
       int i = 1;
       report.setText("UserList (UserID@Privilege):\n");
@@ -199,14 +209,6 @@ public class UserTab implements Initializable {
     }
   }
   //
-  public void superuser(String suID, String suPW) {
-    this.suPW = suPW;
-    this.suID = suID;
-  }
-  public void loadParm(HashMap<String, String> prop, UserList uList) {
-    this.uList = uList;
-    this.prop = prop;
-  }
   private void enable(Button but, boolean on) {
     Add.setDisable(on);
     Change.setDisable(on);
@@ -218,9 +220,19 @@ public class UserTab implements Initializable {
     Save.setDisable(on);
     if (but != null) but.setDisable(!on);
   }
+  //
+  public void loadParm(HashMap<String, String> prop, UserList uList) {
+    this.uList = uList;
+    this.prop = prop;
+  }
+  //
+  public void superuser(String suID, String suPW) {
+    this.suPW = suPW;
+    this.suID = suID;
+  }
+  //
   private void reset() {
     mod = true;
-    priv.setText("");
     userID.setText("");
     userPW.setText("");
     enable(null, false);
@@ -230,6 +242,16 @@ public class UserTab implements Initializable {
     labP.setTextFill(Color.WHITE);
     labID.setTextFill(Color.WHITE);
     labPW.setTextFill(Color.WHITE);
+    //
+    priv.setPromptText("0");
+    priv.setOnKeyTyped(e -> {
+      String c = priv.getText();
+      int l = priv.getText().length();
+      if(l == 0 || l > 1 || c.charAt(0) < '0' || c.charAt(0) > '3') {
+        priv.clear();
+        e.consume();
+      }
+    });
   }
   private HashMap<String, String> prop;
   private String suPW, suID;
