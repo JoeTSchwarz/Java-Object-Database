@@ -40,9 +40,9 @@ public class ODBObjectView {
   }
   /**
   setCharset
-  @param charset Charset, default: StandardCharsets.US_ASCII
+  @param charset String, Charset Name, default: StandardCharsets.US_ASCII
   */
-  public void setCharset(Charset charset) {
+  public void setCharset(String charset) {
     this.charset = charset;
   }
   /**
@@ -969,9 +969,14 @@ public class ODBObjectView {
   //
   private String getString() {
     int l = ((int)(bb[p++]&0xFF)<<8)|(int)(bb[p++]&0xFF);
-    String s =  new String(bb, p, l, charset);
-    p += l;
-    return s;
+    try {
+      String s =  new String(bb, p, l, charset);
+      p += l;
+      return s;
+    } catch (Exception ex) { }
+      String s =  new String(bb, p, l);
+      p += l;
+      return s;
   }
   //
   private int getInt() {
@@ -1124,7 +1129,7 @@ public class ODBObjectView {
   private String clsName, objName, listType;
   private int nFields, p, dim1, dim2, le, ref, delta;
   //
-  private Charset charset = StandardCharsets.US_ASCII;
+  private String charset = "UTF-8";
   private ArrayList<String> fNames = new ArrayList<>(); 
   private HashMap<Integer, Object> vRef = new HashMap<>();
   private HashMap<String, Object> vFields = new HashMap<>();

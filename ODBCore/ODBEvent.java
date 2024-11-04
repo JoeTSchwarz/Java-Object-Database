@@ -9,18 +9,20 @@ import java.util.concurrent.*;
 /**
 Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes message, n bytes list of nodes (cluster)
 <br>owner: String. HostName:PortNumber or HostIP:Port and msg can be a node (like owner) or any String
-<br>0:  Node down (offline)
-<br>1:  Node up (online)
-<br>2:  Node ready
-<br>3:  node unavailble
-<br>4:  superuser msg which can be: forcedFreeKey, forcedRollabck, etc.
-<br>5:  SuperUser, internal, removeNode's Agents  broadcast by ODBManager
-<br>6:  superUser, internal, addNode invoked by ODBService
-<br>7:  SuperUser, internal, removeNode invoked by ODBService
-<br>8:  SuperUser, internal, removeNode issued by ODBManage onEvent()
-<br>9:  SuperUser, forcedClose, invoked by ODBService
-<br>10: SuperUser, internal, joinNode, invoked by ODBWorker
-<br>rest: reserved
+<br>0:  Node down (offline). Format: 0, node, list&lt;alternative JODB&gt;
+<br>1:  Node up (online). Format: 1, node, list&lt;alternative JODB&gt;
+<br>2:  Node ready- Format: 2, node, list&lt;alternative JODB&gt;
+<br>3:  node unavailble. Format: 3, node, list&lt;message&gt;
+<br>4:  superuser msg which can be: forcedFreeKey, forcedRollabck, etc. Format: 4, node, list&lt;message&gt;
+<br>5:  SuperUser, internal, removeNode's Agents  broadcast by ODBManager. Format: 5, node, list&lt;message&gt;
+<br>6:  superUser, internal, addNode invoked by ODBService. Format: 6, node, list&lt;alternative JODB&gt;
+<br>7:  SuperUser, internal, removeNode invoked by ODBService. Format: 7, node, list&lt;alternative JODB&gt;
+<br>8:  SuperUser, internal, removeNode issued by ODBManage onEvent(). Format: 8, node, list&lt;alternative JODB&gt;
+<br>9:  SuperUser, forcedClose, invoked by ODBService. Format: 9, node, list&lt;message&gt;
+<br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
+<br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
+<br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
+<br>rest is reserved for future use
 @author Joe T. Schwarz
 */
 public class ODBEvent {

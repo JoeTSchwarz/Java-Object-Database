@@ -25,10 +25,10 @@ public class ODBInputStream extends InputStream {
   }
   /**
   setCharset
-  @param charset Charset, default: StandardCharsets.US_ASCII
+  @param csName String Charset name, default: "UTF-8"
   */
-  public void setCharset(Charset charset) {
-    this.charset = charset;
+  public void setCharset(String csName) {
+    this.csName = csName;
   }
   /**
   read a byte
@@ -59,20 +59,22 @@ public class ODBInputStream extends InputStream {
   readString - read le continuous bytes and convert to a String
   @param le int, the number of bytes
   @return String (0 length if EOB)
+  @exception Exception thrown by JAVA
   */
-  public String readString(int le) {
+  public String readString(int le) throws Exception {
     if ((pos+le) > buf.length) le = buf.length - pos;
-    String s = new String(buf, pos, le, charset);
+    String s = new String(buf, pos, le, csName);
     pos += le;
     return s;
   }
   /**
   readToken - read n continuous bytes and convert to a String 
   @return String (0 length if EOF)
+  @exception Exception thrown by JAVA
   */
-  public String readToken( ) {
+  public String readToken( ) throws Exception {
     int le =((buf[pos++]&0xFF)<<8)|buf[pos++]&0xFF;
-    String s = new String(buf, pos, le, charset);
+    String s = new String(buf, pos, le, csName);
     pos += le;
     return s;
   }
@@ -186,5 +188,5 @@ public class ODBInputStream extends InputStream {
   //
   private byte[] buf;
   private int pos = 0;
-  private Charset charset = StandardCharsets.US_ASCII;
+  private String csName = "UTF-8";
 }

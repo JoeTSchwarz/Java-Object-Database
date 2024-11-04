@@ -8,16 +8,14 @@ import java.util.zip.*;
 import java.nio.*;
 import java.nio.channels.*;
 import java.util.concurrent.*;
+import java.nio.charset.Charset;
 /**
 Object Data Connect
 @author Joe T. Schwarz (c)
 */
 public class ODBConnect {
   /**
-  contructor
-  <br>Note:
-  <br>- serialized Java object as key must have an implemented equals-method
-  <br>- Leading or trailing spaces are consisdered as part of a string
+  contructor. Open Connection to JODB server
   @param dbHost String, JODB Server hostname or IP
   @param port int, JODB server port
   @param pw String, User's password
@@ -35,18 +33,21 @@ public class ODBConnect {
     ios.writeToken(enc);
     ios.write(soc);
     ios.getSoc(soc); // read the content from soc
-    if (ios.readBool()) {
-      enc = ios.readMsg();
-      priv = enc.charAt(0) & 0x0F;
-      user = enc.substring(1).split("/");
-      listener = new ODBEventListener(user[1]);
-      pool.execute(listener);
-      panicShutdown();
-      dis = false;
-      return;
+    if (!ios.readBool()) {
+      close();
+      throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/ID.");
     }
-    close();
-    throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/UserID.");
+    enc = ios.readMsg();
+    priv = enc.charAt(0) & 0x0F;
+    user = enc.substring(1).split("/");
+    listener = new ODBEventListener(user[1]);
+    pool.execute(listener);
+    // start Shutdown listener
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        if (soc != null) disconnect();
+      }
+    });
   }
   /**
   disconnect() the connection to JODB Server and closes all opened DBs
@@ -61,7 +62,6 @@ public class ODBConnect {
       ios.write(soc);
       ios.getSoc(soc); // a must
     } catch (Exception ex) { }
-    dis = true;
     close();
   }
   /**
@@ -151,17 +151,6 @@ public class ODBConnect {
     else throw new Exception("ADD Privilege: 1. Yours: 0");
   }
   /**
-  add() a seralized object byte array to JODB dbName
-  @param dbName String, the DB name.
-  @param key String
-  @param obj serialized POJO object to be added
-  @exception Exception thrown by JAVA
-  */
-  public void add(String dbName, Object key, byte[] obj) throws Exception {
-    if (priv > 0) send(dbName, 6, ios.toODBKey(key), obj);
-    else throw new Exception("ADD Privilege: 1. Yours: 0");
-  }
-  /**
   unlock all locked keys of this dbName (Note: NO Rollback, NOR Commit is then possible)
   @param dbName String, the DB name.
   @return boolean true: key is unlocked, false if unknown key or key wasn't locked
@@ -182,19 +171,6 @@ public class ODBConnect {
   @exception Exception thrown by JAVA
   */
   public boolean update(String dbName, Object key, Object obj) throws Exception {
-    if (priv == 0) throw new Exception("UPDATE Privilege: 1. Yours: 0");
-    send(dbName, 8, ios.toODBKey(key), obj);
-    return ios.readBool();
-  }
-  /**
-  update() a seralized object byte array of JODB dbName
-  @param dbName String, the DB name.
-  @param key String
-  @param obj serialized POJO object to be replaced
-  @return boolean true if success
-  @exception Exception thrown by JAVA
-  */
-  public boolean update(String dbName, Object key, byte[] obj) throws Exception {
     if (priv == 0) throw new Exception("UPDATE Privilege: 1. Yours: 0");
     send(dbName, 8, ios.toODBKey(key), obj);
     return ios.readBool();
@@ -222,13 +198,14 @@ public class ODBConnect {
   public Object read(String dbName, Object key) throws Exception {
     send(dbName, 10, ios.toODBKey(key));
     byte[] bb = ios.readObj();
-    try (ObjectInputStream oi = new ObjectInputStream(new ByteArrayInputStream(bb))) {
+    if (bb[0] == (byte)0xAC && bb[1] == (byte)0xED) { // serialized object
+      //ObjectInputStream oi = new ObjectInputStream(new ByteArrayInputStream(bb));
+      ObjectInputStream oi = new ObjectInputStream(new ODBInputStream(bb));
       Object obj = oi.readObject();
       oi.close();
       return obj;
-    } catch (Exception ex) { }
-    // must return byte array
-    return bb;
+    }
+    return bb; // not a serialized POJO
   }
   /**
   readBytes() a seralized object as byte array of JODB dbName
@@ -239,9 +216,7 @@ public class ODBConnect {
   */
   public byte[] readBytes(String dbName, Object key) throws Exception {
     send(dbName, 10, ios.toODBKey(key));
-    byte[] bb = ios.readObj();
-    if (bb != null) return bb;
-    throw new Exception("Exception due to unknown reason at KEY:"+key);
+    return (byte[]) ios.readObj();
   }
   /**
   isExisted()
@@ -252,22 +227,6 @@ public class ODBConnect {
   public boolean isExisted(String dbName, Object key) {
     try {
       send(dbName, 11, ios.toODBKey(key));
-      return ios.readBool();
-    } catch (Exception ex) { }
-    return false;
-  }
-  /**
-  isExisted(dbName)
-  @param dbName String, the DB name (abs.path, without any suffix)
-  @return boolean true: ODB of this dbName exists
-  */
-  public boolean isExisted(String dbName) {
-    try {
-      ios.reset();
-      ios.write(32); // cmd: 32
-      ios.writeToken(dbName);
-      ios.write(soc);
-      ios.getSoc(soc); // read the content from soc
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -344,16 +303,34 @@ public class ODBConnect {
     return false;
   }
   /**
-  connect(String dbName) to JODB Server
+  connect(String dbName) to JODB Server with default Charset UTF-8
   @param dbName String, the DB name.
-  @exception IOException thrown by JAVA
+  @exception Exception thrown by JAVA
   */
-  public void connect(String dbName) throws IOException {
-    if (dbName == null || dbName.length() == 0) throw new IOException(dbName+" is null or empty");
-    if (!dbLst.contains(dbName)) {      
+  public void connect(String dbName) throws Exception {
+    connect(dbName, "UTF-8");
+  }
+  /**
+  connect(String dbName, String csName) to JODB Server  with the given CharsetName
+  @param dbName String, the DB name.
+  @param csName String, text .
+  @exception Exception thrown by JAVA or if csName is invalid
+  */
+  public void connect(String dbName, String csName) throws Exception {
+    if (!dbLst.contains(dbName)) {
+      String cset = csName;
       ios.reset();
+      try {
+        Charset.forName(cset);
+      } catch (Exception ex) {
+        cset = "UTF-8";
+      }
+      charsets.put(dbName, cset);
+      ios.setCharset(cset);
+      //
       ios.write(17);
       ios.writeToken(dbName);
+      ios.writeToken(csName);
       ios.write(soc); // send to Server
       ios.getSoc(soc); // read from server
       dbLst.add(dbName);
@@ -499,19 +476,6 @@ public class ODBConnect {
     } else throw new Exception("ADD Privilege: 1. Yours: 0");
   }
   /**
-  add() serialized object byte array to dbName on the specifiied node
-  @param dbName String, the DB name.
-  @param key String
-  @param obj serialized POJO object to be added
-  @param node String, format hostName:port or hostIP:port
-  @exception Exception thrown by JAVA
-  */
-  public void add(String dbName, Object key, byte[] obj, String node) throws Exception {
-    if (priv > 0) {
-      send(dbName, 29, ios.toODBKey(key)+"+"+node, obj);
-    } else throw new Exception("ADD Privilege: 1. Yours: 0");
-  }
-  /**
   changePassword(oldPW, newPW)
   @param oldPW String, old Password
   @param newPW String, new Password
@@ -519,7 +483,7 @@ public class ODBConnect {
   @exception Exception thrown by JAVA
   */
   public boolean changePassword(String oldPW, String newPW) throws Exception {
-   if (oldPW == null || newPW == null) throw new Exception("oldPW:"+oldPW+" or newPW:"+newPW);
+    ios.setCharset("UTF-8");
     ios.reset();
     ios.write(31);
     ios.writeToken(EnDecrypt.encrypt(oldPW));
@@ -528,11 +492,57 @@ public class ODBConnect {
     ios.getSoc(soc); // read the content from soc
     return ios.readBool();
   }
+  /**
+  notify() request for notify in case of add/delete/update if enabled = true, else disable
+  @param dbName String, the DB name.
+  @param enables boolean, true: enable, false: disable (default)
+  */
+  public void notify(String dbName, boolean enabled) {
+    try {
+      send(dbName, 39, enabled? "1":"0");
+    } catch (Exception ex) { }
+  }
+  /**
+  sendMsg() send a message to JODB
+  @param msg String, the message
+  */
+  public void sendMsg(String msg) {
+    try {
+      ios.reset();
+      ios.write(40);
+      ios.writeToken(msg);
+      ios.write(soc);
+    } catch (Exception ex) { }
+  }
+  /**
+  charsetOf from a given text
+  @param txt String with special character in your language. Example: Käfer in German
+  @return Charset the charset for this txt. Default UTF-8 Charset if txt is unknown
+  */
+  public Charset charsetOf(String txt) {
+    return Charset.forName(charsetNameOf(txt));
+  }
+  /**
+  charsetNameOf from a given text
+  @param txt String with special character in your language. Example: Käfer in German
+  @return String the charset name for this txt. Default UTF-8 if txt is unknown
+  */
+  public String charsetNameOf(String txt) {
+    String utf = "UTF-8";
+    try {
+      Set<String> csSet = Charset.availableCharsets().keySet();
+      for(String cs : csSet) {
+        if(Charset.forName(cs) != null) {
+          if (txt.equals(new String(new String(txt.getBytes(cs), utf).getBytes(utf), cs))) return cs;
+        }
+      }
+    } catch(Exception ex) { }
+    return utf;
+  }
   //--------------------------------------------------------------------------
   protected void send(String dbName, int cmd, String key, Object obj) throws Exception {
-    if (dis) return;
-    if (key == null || obj == null || !dbLst.contains(dbName)) 
-      throw new Exception("Invalid dbName or obj/key is null");
+    if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or obj/key is null");
+    ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
     ios.write(cmd);
@@ -544,8 +554,8 @@ public class ODBConnect {
   }
   // Check dbName and key
   protected void send(String dbName, int cmd, String key) throws Exception {
-    if (dis) return;
-    if (key == null || !dbLst.contains(dbName)) throw new Exception("Invalid dbName or key is null");
+    if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or key is null");
+    ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
     ios.write(cmd);
@@ -556,8 +566,8 @@ public class ODBConnect {
   }
   //
   protected void send(String dbName, int cmd) throws Exception {
-    if (dis) return;
     if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName.");
+    ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
     ios.write(cmd);
@@ -572,24 +582,19 @@ public class ODBConnect {
       soc.shutdownInput();
       soc.close();
     } catch (Exception ex) { }
-    listener.exitListening();
+    listener.exit();
     pool.shutdownNow();
-  }
-  // hook the Shutdown watchdog.
-  private void panicShutdown(){
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      public void run() {
-        if (!dis) disconnect();
-      }
-    });
+    charsets.clear();
+    soc = null;
   }
   // data area
   protected int priv;
   protected String[] user;
   protected SocketChannel soc;
   protected ODBEventListener listener;
+  protected boolean autoCommit = false;
   protected ODBIOStream ios = new ODBIOStream();
   protected ArrayList<String> dbLst = new ArrayList<>();
-  protected boolean dis = true, autoCommit = false, event = false;
+  protected HashMap<String, String> charsets = new HashMap<>();
   protected ExecutorService pool = Executors.newFixedThreadPool(10);
 }

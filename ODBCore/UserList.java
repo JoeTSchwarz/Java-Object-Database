@@ -47,6 +47,37 @@ public class UserList {
     }
   }
   /**
+  isVald - valid if inp does not contain a colon (:) or an at (@)
+  @param inp String
+  @return boolean true if inp does not contain the mentioned letters
+  */
+  public boolean isValid(String inp) {
+    return (inp != null && inp.indexOf(":") < 0 && inp.indexOf("@") < 0 && inp.length() >= 3);
+  }
+  /**
+  isVald - valid if pw or uid does not contain a colon (:) or an at (@)
+  @param pw  String, User Password
+  @param uid String, User Login ID
+  @return boolean true if pw AND uid do not contain the mentioned letters
+  */
+  public boolean isValid(String pw, String uid) {
+    return (pw != null && pw.indexOf(":") < 0 && pw.indexOf("@") < 0 && pw.length() >= 3 && 
+            uid != null && uid.indexOf(":") < 0 && uid.indexOf("@") >= 0 && uid.length() >= 3);
+  }
+  /**
+  isExisted - uID exists?
+  @param uid String, User Login ID
+  @return boolean true if uid exits in the userlist
+  */
+  public boolean isExisted(String uid) {
+   if (uid != null) {
+      for (String u : uList) {
+        if (uid.equals(u.substring(u.indexOf(":")+1, u.indexOf("@")))) return true;
+      }
+    }
+    return false;
+  }
+  /**
   isUser
   @param pw  String, User Password
   @param uid String, User Login ID
@@ -180,16 +211,17 @@ public class UserList {
     if (!(new File(uFile)).exists()) throw new Exception("No \"userlist\" is found in "+path);
     uList = new ArrayList<String>();
     uList.add("system:admin@3");
-    //
-    int n;
-    GZIPInputStream gin = new GZIPInputStream(new FileInputStream(uFile));
-    String[] lst = (new String(gin.readAllBytes())).split("\n");
-    for (String s : lst) {
-      n = s.indexOf("@"); // remove the old admin
-      String user = EnDecrypt.decrypt(s.substring(0, n));
-      if (!user.endsWith(":admin")) uList.add(user + s.substring(n));
-    }
-    gin.close();
+    try {
+      int n;
+      GZIPInputStream gin = new GZIPInputStream(new FileInputStream(uFile));
+      String[] lst = (new String(gin.readAllBytes())).split("\n");
+      for (String s : lst) {
+        n = s.indexOf("@"); // remove the old admin
+        String user = EnDecrypt.decrypt(s.substring(0, n));
+        if (!user.equals("system:admin")) uList.add(user + s.substring(n));
+      }
+      gin.close();
+    } catch (Exception ex) { }
     save( );
   }
   /**
@@ -219,19 +251,6 @@ public class UserList {
     gzip.write(ios.toByteArray());
     gzip.flush( );
     gzip.close( );
-  }
-  //
-  private boolean isExisted(String uID) {
-    if (uID != null && uID.length() > 2) for (String u : uList) {
-      if (u.substring(u.indexOf(":")+1, u.indexOf("@")).equals(uID)) return true;
-    }
-    return false;
-  }
-  //
-  private boolean isValid(String pw, String uid) {
-    if (uid.indexOf(":") >= 0 || uid.indexOf("+") >= 0 || uid.indexOf("@") >= 0) return false;
-    if (pw != null && uid != null && pw.length() > 3 && uid.length() > 2) return true;
-    return false;
   }
   //
   private String uFile;

@@ -14,27 +14,34 @@ Object Data Management System. Instantiated and maintained by ODBManager
 */
 class ODMS {
   /**
-  Constructor
+  Constructor with default UTF-8
   @param dbName String the object file name (auto create if non existed)
   */
   protected ODMS(String dbName) {
     this.dbName = dbName;
+    this.csName = csName;
     cache = new ConcurrentHashMap<String, byte[]>();
     oCache = new ConcurrentHashMap<String, List<byte[]>>();    
   }
   /**
-  setCharset
-  @param charset Charset, default: StandardCharsets.US_ASCII
+  Constructor
+  @param dbName String the object file name (auto create if non existed)
+  @param csName String the character set
   */
-  protected void setCharset(Charset charset) {
-    this.charset = charset;
+  protected ODMS(String dbName, String csName) {
+    this.dbName = dbName;
+    this.csName = csName;
+    cache = new ConcurrentHashMap<String, byte[]>();
+    oCache = new ConcurrentHashMap<String, List<byte[]>>();    
   }
   /**
   getKeys() returns an ArrayList of all ODB keys
   @return ArrayList of strings (as keys)
   */
   protected ArrayList<String> getKeys() {
-    return new ArrayList<String>(cache.keySet());
+    // don't directly return this lst !
+    ArrayList<String> lst = new ArrayList<>(cache.keySet());
+    return lst;
   }
   /**
   isExisted. Excl. deleted key
@@ -104,8 +111,8 @@ class ODMS {
   */
   protected boolean commit(String key) {
     boolean ok = oCache.remove(key) != null;
-    if (ok) committed = true;
-    return ok;
+    if (ok) committed = true; // must be!
+    return true;
   }
   /**
   commit all transaction on this ODB
@@ -203,7 +210,7 @@ class ODMS {
       gi.close();
       //
       ODBInputStream ois = new ODBInputStream(ios.toByteArray());
-      ois.setCharset(charset);
+      ois.setCharset(csName);
       //
       while (ois.remainderLength() > 0) {
         int kL  = ois.readShort();
@@ -216,9 +223,8 @@ class ODMS {
     }
   }
   // Data area
-  private String dbName;
   private boolean committed = false;
+  private String dbName, csName = "UTF-8";
   private ConcurrentHashMap<String, byte[]> cache;
-  private Charset charset = StandardCharsets.US_ASCII;
   private ConcurrentHashMap<String, List<byte[]>> oCache;
 }

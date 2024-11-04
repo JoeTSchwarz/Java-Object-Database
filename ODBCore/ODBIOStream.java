@@ -21,10 +21,10 @@ public class ODBIOStream {
   }
   /**
   setCharset
-  @param charset Charset, default: StandardCharsets.US_ASCII
+  @param csName String Charset name, default: "UTF-8"
   */
-  public void setCharset(Charset charset) {
-    this.charset = charset;
+  public void setCharset(String csName) {
+    this.csName = csName;
   }
   // unformated write (consecutive)
   /**
@@ -59,27 +59,27 @@ public class ODBIOStream {
   /**
   writeString
   @param s String
-  @exception IOException thrown by JAVA
+  @exception Exception thrown by JAVA
   */
-  public void writeString(String s) throws IOException {
+  public void writeString(String s) throws Exception {
     //Note: for internal use only. No check
     int le = s.length();
     if ((pos+le) >= MAX) enlarge(le);
-    System.arraycopy(s.getBytes(), 0, buf, pos, le);
+    System.arraycopy(s.getBytes(csName), 0, buf, pos, le);
     pos += le;
   }
   /**
   writeToken
   @param name String
-  @exception IOException thrown by JAVA
+  @exception Exception thrown by JAVA
   */
-  public void writeToken(String name) throws IOException {
+  public void writeToken(String name) throws Exception {
     int le = name.length();
     if ((pos+le) >= MAX) enlarge(le);
     buf[pos++] = (byte)(le>>8);
     buf[pos++] = (byte) le;
     // native arraycopy is faster than for-loop
-    System.arraycopy(name.getBytes(), 0, buf, pos, le);
+    System.arraycopy(name.getBytes(csName), 0, buf, pos, le);
     pos += le;
   }  
   /**
@@ -141,7 +141,7 @@ public class ODBIOStream {
       return;
     }
     if (obj instanceof String) { // write(String)
-      byte[] bb = ((String)obj).getBytes();
+      byte[] bb = ((String)obj).getBytes(csName);
       if ((pos+bb.length) >= MAX) enlarge(bb.length);
       System.arraycopy(bb, 0, buf, pos, bb.length);
       pos += bb.length;
@@ -227,7 +227,11 @@ public class ODBIOStream {
     if ((pos+len) >= MAX) enlarge(len);
     buf[5] = (byte) (len >> 8);
     buf[6] = (byte)  len;
-    System.arraycopy(msg.getBytes(), 0, buf, 17, len);
+    try {
+      System.arraycopy(msg.getBytes(csName), 0, buf, 17, len);
+    } catch (Exception ex) {
+      System.arraycopy(msg.getBytes(), 0, buf, 17, len);
+    }
     pos = 17+len;
   }
   /**
@@ -259,7 +263,11 @@ public class ODBIOStream {
       int le = S.length();
       buf[pos++] = (byte)(le >> 8);
       buf[pos++] = (byte) le;
-      System.arraycopy(S.getBytes(), 0, buf, pos, le);
+      try {
+        System.arraycopy(S.getBytes(csName), 0, buf, pos, le);
+      } catch (Exception ex) {
+        System.arraycopy(S.getBytes(), 0, buf, pos, le);
+      }
       pos += le;
     }
   }
@@ -300,9 +308,9 @@ public class ODBIOStream {
   /**
   writePrimitives
   @param obj object that can be a String, an int, a double, a float,a long, a short, a char...
-  @exception IOException thrown by JAVA
+  @exception Exception thrown by JAVA
   */
-  public void writePrimitive(Object obj) throws IOException {
+  public void writePrimitive(Object obj) throws Exception {
     if (obj instanceof String) {
       int le = ((String)obj).length();
       if ((pos+le) >= MAX) enlarge(le);
@@ -310,7 +318,7 @@ public class ODBIOStream {
       buf[14] = (byte) (le >> 16);
       buf[15] = (byte) (le >> 8);
       buf[16] = (byte)  le;
-      System.arraycopy(((String)obj).getBytes(), 0, buf, pos, le);
+      System.arraycopy(((String)obj).getBytes(csName), 0, buf, pos, le);
       pos += le;
     } else {
       if ((pos+8) >= MAX) enlarge(32);
@@ -365,9 +373,9 @@ public class ODBIOStream {
   /**
   read the content from SocketChanneland load to buffer
   @param soc SocketChannel
-  @exception IOException thrown by JAVA
+  @exception Exception thrown by JAVA
   */
-  public void read(SocketChannel soc) throws IOException {
+  public void read(SocketChannel soc) throws Exception {
     ByteBuffer bbuf = ByteBuffer.allocateDirect(65536);
     int le = 0; pos = 0;
     do {
@@ -392,13 +400,13 @@ public class ODBIOStream {
   /**
   getSoc - load the content from SocketChannel to buffer
   @param soc SocketChannel
-  @exception IOException thrown by JAVA or ODBWorker
+  @exception Exception thrown by JAVA or ODBWorker
   */
-  public void getSoc(SocketChannel soc) throws IOException {
+  public void getSoc(SocketChannel soc) throws Exception {
     read(soc);
     // check ODBWorker Exception
     int l = ((buf[7]&0xFF) << 8)|(buf[8]&0xFF);
-    if (l > 0) throw new IOException(new String(buf,17+(((buf[5]&0xFF)<<8)|(buf[6]&0xFF)), l, charset));
+    if (l > 0) throw new IOException(new String(buf,17+(((buf[5]&0xFF)<<8)|(buf[6]&0xFF)), l));
   }
   /**
   readObj
@@ -426,7 +434,7 @@ public class ODBIOStream {
       int le = (int)(buf[14] & 0xFF) << 16 |
                (int)(buf[15] & 0xFF) << 8 |
                (int)(buf[16] & 0xFF);
-      return new String(buf, p, le, charset);
+      return new String(buf, p, le, csName);
     } else if (buf[13] == (byte)0x01) { // int
       return ((int)(buf[p++] & 0xFF) << 24 |
               (int)(buf[p++] & 0xFF) << 16 |
@@ -475,7 +483,7 @@ public class ODBIOStream {
       p += 2; // position of Key-Tag
       // String as key
       if (buf[p] == (byte)0x00) {
-        list.add(new String(buf, ++p, le, charset));
+        list.add(new String(buf, ++p, le, csName));
       }
       // long value as Key
       else if (buf[p] == (byte)0x01) {
@@ -514,8 +522,9 @@ public class ODBIOStream {
   /**
   readList
   @return String ArrayList
+  @exception Exception thrown by JAVA
   */
-  public ArrayList<String> readList() {
+  public ArrayList<String> readList() throws Exception {
     ArrayList<String> list = new ArrayList<>(); // create a List
     int len = (((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|
               ((buf[11]&0xFF) << 8)|(buf[12]&0xFF));
@@ -523,7 +532,7 @@ public class ODBIOStream {
     int p = 17+(((buf[5]&0xFF) << 8)|(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF));
     for (int sum = 0, le; sum < len; sum += (2+le)) {
       le = ((buf[p]&0xFF) << 8)+(buf[p+1]&0xFF);
-      list.add(new String(buf, p+2, le, charset));
+      list.add(new String(buf, p+2, le, csName));
       p += (2+le);
     }
     return list;
@@ -531,11 +540,12 @@ public class ODBIOStream {
   /**
   readMsg
   @return String or null
+  @exception Exception thrown by JAVA
   */
-  public String readMsg() {
+  public String readMsg() throws Exception {
     int len = ((buf[5]&0xFF) << 8)|(buf[6]&0xFF);
     if (len == 0) return null;
-    return new String(buf, 17, len, charset);
+    return new String(buf, 17, len, csName);
   }
   /**
   readInt
@@ -590,6 +600,6 @@ public class ODBIOStream {
     buf = tmp;
   }
   private byte[] buf;
-  private int MAX = 65536, pos = 0;
-  private Charset charset = StandardCharsets.US_ASCII;
+  private int MAX=65536, pos=0;
+  private String csName = "UTF-8";
 }

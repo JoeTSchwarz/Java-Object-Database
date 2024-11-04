@@ -8,6 +8,7 @@ import java.util.concurrent.*;
 //
 import java.nio.*;
 import java.nio.channels.*;
+import java.nio.charset.Charset;
 /**
 Object Data Manager
 @author Joe T. Schwarz (c)
@@ -21,8 +22,10 @@ public class ODBManager implements ODBEventListening {
     this.parms = parms;
     parms.odMgr = this;
     uIDList = Collections.synchronizedList(new ArrayList< >());
+    workers = Collections.synchronizedList(new ArrayList< >());
     cluster = Collections.synchronizedList(new ArrayList< >());
     dbList = Collections.synchronizedList(new ArrayList< >());
+    charsets = new ConcurrentHashMap<>();
     dbWorker = new ConcurrentHashMap<>();
     dbCommit = new ConcurrentHashMap<>();
     dbOwner = new ConcurrentHashMap<>();
@@ -40,13 +43,6 @@ public class ODBManager implements ODBEventListening {
       } catch (Exception e) { }
       parms.BC.broadcast(1, parms.webHostName, parms.nodes);
     });
-  }
-  /**
-  setID -set User ID
-  @param uID String user ID after connect
-  */
-  public void setID(String uID) {
-    uIDList.add(uID);
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -73,17 +69,16 @@ public class ODBManager implements ODBEventListening {
         parms.nodes.remove(node);
         List<String> uLst = new ArrayList<String>(dbOwner.keySet());
         for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
-        else if (node.equals(parms.webHostName)) 
-        parms.BC.broadcast(8, node, parms.nodes);
+        else if (node.equals(parms.webHostName)) parms.BC.broadcast(8, node, parms.nodes);
         return;
       }
       // 1: node up, 6: addNode
       if (type == 1 || type == 6) {
         try {
           if (joinNode(node)) {
-            parms.BC.broadcast(2, node, parms.nodes);
-            new ODBCluster(node).joinNode(parms.webHostName);
-          } else parms.BC.broadcast(3, node, parms.nodes); // failed
+            parms.BC.broadcast(2, node, parms.nodes); // is ready
+            nodes.get(node).joinNode(parms.webHostName, node); // node as owner
+          } else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
         } catch (Exception ex) { }
         return;
       }
@@ -91,7 +86,7 @@ public class ODBManager implements ODBEventListening {
         List<String> uLst = new ArrayList<String>(dbOwner.keySet());
         for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
       } catch (Exception e) {
-        parms.BC.broadcast(3, node, parms.nodes);
+        parms.BC.broadcast(3, node, Arrays.asList("Failed to remove Agents on "+node));
       }
     });
   }
@@ -99,15 +94,16 @@ public class ODBManager implements ODBEventListening {
   connect to the specified dbName (ODBCluster and ODBConnect)
   @param uID    String, userID
   @param dbName String, the DB name
+  @param cs     String, Charset name
   @exception Exception thrown by JAVA
   */
-  public void connect(String uID, String dbName) throws Exception {
+  public void connect(String uID, String dbName, String cs) throws Exception {
     if (odmsLst.get(dbName) == null) {
-      ODMS odms = new ODMS(parms.db_path+dbName);
-      odms.setCharset(parms.charset);
+      ODMS odms = new ODMS(parms.db_path+dbName, cs);
       odmsLst.put(dbName, odms);
       odms.open();
     }
+    charsets.put(dbName, cs);
     dbCommit.put(dbName, autoCom.get(uID) != null);
     if (!dbList.contains(dbName)) dbList.add(dbName);
     if (kOwner.get(dbName) == null) kOwner.put(dbName, new ConcurrentHashMap<String, String>());
@@ -125,8 +121,8 @@ public class ODBManager implements ODBEventListening {
   bindAgent() - bind dbAgents. Invoked by ODBWorker-ODBConnect/connect
   @param aID String
   */
-  public void bindAgent(String aID) {
-    for (ODBCluster odbc:cluster) odbc.connect(aID);
+  public void bindAgent(String aID, String cSet) {
+    for (ODBCluster odbc:cluster) odbc.connect(aID, cSet);
   }
   /**
   unbindAgent() - unbind dbAgents. Invoked by ODBWorker-ODBConnect/disconnect
@@ -146,13 +142,13 @@ public class ODBManager implements ODBEventListening {
       List<String> lst = dbOwner.get(uID);
       if (lst != null) for (String dbName:lst) dbCommit.put(dbName, true);
       if (uID.charAt(0) != '+') // tell all Agents autoommit
-        for (ODBCluster odbc:cluster) odbc.autoCommit('+'+uID+'|', true);
+        for (ODBCluster odbc:cluster) odbc.autoCommit("+"+uID+"|", true);
     } else {
       autoCom.remove(uID); // set if true, else reset
       List<String> lst = dbOwner.get(uID);
       if (lst != null) for (String dbName:lst) dbCommit.remove(dbName);
       if (uID.charAt(0) != '+') // tell all Agents autoommit
-        for (ODBCluster odbc:cluster) odbc.autoCommit('+'+uID+'|', false);
+        for (ODBCluster odbc:cluster) odbc.autoCommit("+"+uID+"|", false);
     }
   }
   /**
@@ -172,6 +168,13 @@ public class ODBManager implements ODBEventListening {
     return dbCommit.get(dbName) != null;
   }
   /**
+  getCharset()
+  @return String Charset Name if set, else null
+  */
+  public String getCharset(String dbName) {
+    return charsets.get(dbName);
+  }
+  /**
   getKeys() return all keys of the specified dbName (without the deleted)
   @param uID    String, userID
   @param dbName String, dbName to be unlocked
@@ -181,7 +184,7 @@ public class ODBManager implements ODBEventListening {
   public synchronized ArrayList<String> getKeys(String uID, String dbName) {
     ArrayList<String> keys = getLocalKeys(uID, dbName);
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) {
         ArrayList<String> local = odbc.getLocalKeys(dbName);
         // null && size must be checked. Otherwise exception
@@ -258,7 +261,7 @@ public class ODBManager implements ODBEventListening {
       }
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.update(dbName, key, obj)) return true;
     }
     return false;
@@ -289,7 +292,7 @@ public class ODBManager implements ODBEventListening {
       }
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.delete(dbName, key)) return true;
     }
     return false;
@@ -307,18 +310,19 @@ public class ODBManager implements ODBEventListening {
   public byte[] read(String uID, String dbName, String key) throws Exception {
     ODMS odms = odmsLst.get(dbName);
     if (odms == null) return null;
-    if (isKeyFree(uID, dbName, key)) {
+    String uid = kOwner.get(dbName).get(key);
+    if (odms.isExisted(key) && (uID.equals(uid) || uid == null)) {
       byte[] bb = odms.readObject(key);
       if (bb != null) return bb;
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc:cluster) {
         byte[] bb = odbc.getByteArray(dbName, key);
         if (bb != null) return bb;
       }
     }
-    throw new Exception("Read "+dbName+" faield. Probably "+key+" is locked or unknown.");
+    throw new Exception("Read "+dbName+" failed. Probably "+key+" is locked or unknown.");
   }
   /**
   close() closes all connected db opened by uID
@@ -328,7 +332,10 @@ public class ODBManager implements ODBEventListening {
   // owner Check is done on ODBConnect
   public void close(String uID) throws Exception {
     List<String> lst = dbOwner.get(uID);
-    for (String dbName:lst) close(uID, dbName);
+    for (String dbName : lst) {
+      charsets.remove(dbName);
+      close(uID, dbName);
+    }
   }
   /**
   close() closes a connected dbName opened by uID
@@ -341,12 +348,13 @@ public class ODBManager implements ODBEventListening {
     boolean auto = autoCom.get(uID) != null;
     restoreKeys(uID, dbName, auto);
     List<String> list = dbOwner.get(uID);
+    charsets.remove(dbName);
     list.remove(dbName);
     dbOwner.put(uID, list);
     onActive(uID, dbName);
     //
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc:cluster) {
         if (auto) odbc.commit(dbName);
         else odbc.rollback(dbName);
@@ -392,7 +400,7 @@ public class ODBManager implements ODBEventListening {
     odms.save();
     //
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc:cluster) {
         if (auto) odbc.commit(dbName);
         else odbc.rollback(dbName);
@@ -413,7 +421,7 @@ public class ODBManager implements ODBEventListening {
     if (odms == null) return false;
     if (odms.isExisted(key)) return true;
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.isExisted(dbName, key)) return true;
     }
     return false;
@@ -454,7 +462,7 @@ public class ODBManager implements ODBEventListening {
       return false;
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.isKeyFree(dbName, key)) return true;
     }
     return false;
@@ -470,7 +478,7 @@ public class ODBManager implements ODBEventListening {
   public boolean isLocked(String uID, String dbName, String key) {
     if (kOwner.get(dbName).get(key) != null) return true;
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) 
         if (odbc.isLocked(dbName, key)) return true;
     }
@@ -496,7 +504,7 @@ public class ODBManager implements ODBEventListening {
       return true;
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.lock(dbName, key)) return true;
     }
     return false;
@@ -520,7 +528,7 @@ public class ODBManager implements ODBEventListening {
       }
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.unlock(dbName, key)) return true;
     }
     return false;
@@ -543,7 +551,7 @@ public class ODBManager implements ODBEventListening {
       return true;
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.unlock(dbName)) return true;
     }
     return false;
@@ -570,7 +578,7 @@ public class ODBManager implements ODBEventListening {
       }
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.restoreKey(dbName, key, mode)) return true;
     }
     return false;
@@ -604,18 +612,22 @@ public class ODBManager implements ODBEventListening {
    return false;
   }
   /**
-  shutdown() closes ALL open db
+  shutdown() closes ALL open db and Agents
   @exception Exception thrown by JAVA
   */
   public void shutdown( ) throws Exception {
-    StringBuilder sb = new StringBuilder(parms.webHostName+(char)0x01);
-    for (String uID:uIDList) sb.append('+'+uID+"|;");
-    parms.BC.broadcast(0, sb.toString(), parms.nodes);
-    for (ODBCluster odbc:cluster) odbc.closeAgent( );
-    // wait for broadcasting and closing of all agents
-    TimeUnit.MICROSECONDS.sleep(250);
-    parms.listener.exitListening();
-    parms.active = false;
+    for (String uID:uIDList) {
+      for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
+      removeAgent(uID);
+    }
+    // wait for closing of all active agents
+    TimeUnit.MILLISECONDS.sleep(parms.delay);
+    // broadcast this webHostName node is down
+    parms.BC.broadcast(0, parms.webHostName, parms.nodes);
+    // wait for this broadcasting draining
+    TimeUnit.MILLISECONDS.sleep(parms.delay);
+    // close all active workers on this node
+    for (ODBWorker w:workers) w.exit();
   }
   /**
   remove a node from cluster
@@ -626,11 +638,13 @@ public class ODBManager implements ODBEventListening {
     if (odbc == null) return; // unknown node
     // remove all agents TO this node on Cluster
     List<String> uLst = new ArrayList<String>(dbOwner.keySet());
-    for (String uID:uLst) if (uID.charAt(0) != '+') odbc.removeClient('+'+uID+'|');
+    for (String uID:uLst) if (uID.charAt(0) != '+') odbc.removeClient("+"+uID+"|");
     cluster.remove(odbc); // remove odbc from cluster
     odbc.disconnect(); // disconnect and broadcast Message
+    //
+    nodes.remove(node); // remove this node
     parms.nodes.remove(node); // remove this node
-    parms.BC.broadcast(5, node, parms.nodes);
+    parms.BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
   }
   /**
   joinNode
@@ -639,13 +653,16 @@ public class ODBManager implements ODBEventListening {
   */
   public boolean joinNode(String node) {
     try {
-      ODBCluster odbc = new ODBCluster(node);
-      cluster.add(odbc);  // new cluster (instance)
-      nodes.put(node, odbc); // reload the opened ODBs
+      ODBCluster odbc = nodes.get(node);
+      if (odbc == null) { // new node
+        odbc = new ODBCluster(node);
+        cluster.add(odbc);  // new cluster (instance)
+        nodes.put(node, odbc); // reload the opened ODBs
+      }
       if (dbList.size() > 0) {
         List<String> uList = new ArrayList<String>(dbOwner.keySet());
         for (String dbName:dbList) for (String uID:uList)  // attach to DBs
-        if (uID.charAt(0) != '+') odbc.connect('+'+uID+'|'+dbName);
+        if (uID.charAt(0) != '+') odbc.connect("+"+uID+"|"+dbName, charsets.get(dbName));
       }
       parms.nodes.add(node);
       return true;
@@ -706,7 +723,7 @@ public class ODBManager implements ODBEventListening {
       if (kMap != null) keys = new ArrayList<>(kMap.keySet());
     }
     if (uID.charAt(0) != '+') {
-      dbName = '+'+uID+'|'+dbName;
+      dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc:cluster) {
         List<String> lst = odbc.lockedKeys(dbName);
         if (lst != null) keys.addAll(lst);
@@ -722,18 +739,11 @@ public class ODBManager implements ODBEventListening {
   public boolean removeClient(String uID) {
     if (uID.charAt(0) == '*') {
       List<String> uLst = new ArrayList<String>(dbOwner.keySet());
-      for (String uid:uLst) { // all Workers and Agents
-        boolean auto = autoCom.remove(uid) != null;       
-        List<String> list = dbOwner.remove(uid);
-        if (list != null && list.size() > 0) for (String dbName:list) {
-          restoreKeys("*", dbName, auto);
-          onActive(uid, dbName);
-        }
-      }
+      for (String uid:uLst) removeAgent(uid);
       return true;
     }
-    if (removeAgent(uID)) return true;
-    return removeAgent('+'+uID+'|');
+    if (uID.charAt(0) != '+') removeAgent("+"+uID+"|");
+    return removeAgent(uID);
   }
   /**
   removeAgent(String uID) or user disconnect()
@@ -762,12 +772,16 @@ public class ODBManager implements ODBEventListening {
     dbWorker.remove(dbName);
     dbList.remove(dbName);
   }
-  // data area
+  // public data area
+  public List<String> uIDList;
+  public List<ODBWorker> workers;
+  // private data area
   private String userID;
   private ODBParms parms;
+  private List<String> dbList;
   private List<ODBCluster> cluster;
-  private List<String> dbList, uIDList;
   private ConcurrentHashMap<String, ODMS> odmsLst;
+  private ConcurrentHashMap<String, String> charsets;
   private ConcurrentHashMap<String, ODBCluster> nodes;
   private ConcurrentHashMap<String, Boolean> autoCom, dbCommit;
   private ConcurrentHashMap<String, List<String>> dbOwner, dbWorker;

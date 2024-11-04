@@ -8,18 +8,20 @@ import java.util.concurrent.*;
 /**
 Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes message, n bytes list of nodes (cluster)
 <br>owner: String. HostName:PortNumber or HostIP:Port and msg can be a node (like owner) or any String
-<br>0:  Node down (offline)
-<br>1:  Node up (online)
-<br>2:  Node ready
-<br>3:  node unavailble
-<br>4:  superuser msg which can be: forcedFreeKey, forcedRollabck, etc.
-<br>5:  SuperUser, internal, removeNode's Agents  broadcast by ODBManager
-<br>6:  superUser, internal, addNode invoked by ODBService
-<br>7:  SuperUser, internal, removeNode invoked by ODBService
-<br>8:  SuperUser, internal, removeNode issued by ODBManage onEvent()
-<br>9:  SuperUser, forcedClose, invoked by ODBService
-<br>10: SuperUser, internal, joinNode, invoked by ODBWorker
-<br>rest: reserved
+<br>0:  Node down (offline). Format: 0, node, list&lt;talternative JODB&gt;
+<br>1:  Node up (online). Format: 1, node, list&lt;alternative JODB&gt;
+<br>2:  Node ready- Format: 2, node, list&lt;alternative JODB&gt;
+<br>3:  node unavailble. Format: 3, node, list&lt;message&gt;
+<br>4:  superuser msg which can be: forcedFreeKey, forcedRollabck, etc. Format: 4, node, list&lt;message&gt;
+<br>5:  SuperUser, internal, removeNode's Agents  broadcast by ODBManager. Format: 5, node, list&lt;message&gt;
+<br>6:  superUser, internal, addNode invoked by ODBService. Format: 6, node, list&lt;alternative JODB&gt;
+<br>7:  SuperUser, internal, removeNode invoked by ODBService. Format: 7, node, list&lt;alternative JODB&gt;
+<br>8:  SuperUser, internal, removeNode issued by ODBManage onEvent(). Format: 8, node, list&lt;alternative JODB&gt;
+<br>9:  SuperUser, forcedClose, invoked by ODBService. Format: 9, node, list&lt;message&gt;
+<br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
+<br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
+<br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
+<br>rest is reserved for future use
 @author Joe T. Schwarz
 */
 public class ODBBroadcaster implements Runnable {
@@ -28,7 +30,7 @@ public class ODBBroadcaster implements Runnable {
   @param host_port string, HostName:Port or HostIP:Port
   */
   public ODBBroadcaster(String host_port) {
-    ip = host_port.split(":");
+    this.host_port = host_port;
   }
   /**
   @param cmd int, send command type
@@ -41,15 +43,22 @@ public class ODBBroadcaster implements Runnable {
     else sb.append("*"+(char)0x01); // dummy node
     msgLst.add(sb.toString().getBytes());
   }
-  // stopped by ODBService
-  public void halt() {
-    loop = false;
+  // called by ODBService
+  public void exit() {
+    if (mcs != null) try {
+      mcs.close();
+      mcs = null;
+    } catch (Exception ex) { }
   }
   public void run( ) {
-    int port = Integer.parseInt(ip[1]);
-    try (MulticastSocket mcs = new MulticastSocket(port)) {
+    boolean running = false;
+    try {
+      String[] ip = host_port.split(":");
+      int port = Integer.parseInt(ip[1]);
+      mcs = new MulticastSocket(port);
       InetAddress group = InetAddress.getByName(ip[0]);
-      while (loop) {
+      running = true;
+      while (true) {
         while (msgLst.size() > 0) {
           byte[] msg = msgLst.remove(0);
           mcs.send(new DatagramPacket(msg, msg.length, group, port));
@@ -58,8 +67,12 @@ public class ODBBroadcaster implements Runnable {
         java.util.concurrent.TimeUnit.MICROSECONDS.sleep(100);
       }
     } catch (Exception ex) { }
+    if (!running) {
+      System.err.println("Unable to start ODBBroadcaster:"+host_port);
+      System.exit(0);
+    }
   }
-  private String[] ip;
-  private volatile boolean loop = true;
+  private String host_port;
+  private MulticastSocket mcs;
   private volatile List<byte[]> msgLst = Collections.synchronizedList(new ArrayList<byte[]>());
 }

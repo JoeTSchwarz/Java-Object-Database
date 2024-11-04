@@ -4,46 +4,60 @@ import java.io.*;
 import java.net.*;
 import java.time.*;
 import java.util.*;
-import java.util.zip.*;
 import java.util.concurrent.*;
-import java.nio.charset.Charset;
 //
 import java.nio.*;
 import java.nio.channels.*;
 // @author Joe T. Schwarz (c)
 /**
-Object Data Management System
+ODB Services server
 @author Joe T. Schwarz (c)
 */
-public class ODBService implements Runnable {
+public class ODBService {
   /**
   Constructor. This is the base for a customized JODB server
-  @param config String, config file name
+  @param config String, Server's config file name
   @exception Exception thrown by JAVA
   */
   public ODBService(String config) throws Exception {
     HashMap<String, String> map = ODBParser.odbProperty(config);
+    parms = new ODBParms(map.get("ODB_PATH").replace(File.separator, "/")+"/");
+    //
     LocalDateTime now = LocalDateTime.now();
     // create a LOG txt file with DayOfWeek day Month Year Hour minute Second
-    int day = now.getDayOfMonth(), month = now.getMonthValue(), year = now.getYear();
-    if (map.get("LOGGING").charAt(0) == '1')
-      logger = new BufferedOutputStream(new FileOutputStream(map.get("LOG_PATH")+
-               String.format("%s, %2d %s %4d_%2dH%2dMin%2dSec.txt",
-               LocalDate.of(year, month,  day).getDayOfWeek().name().substring(0, 3),
-               day, month(month), year, now.getHour(), now.getMinute(), now.getSecond()), false));
+    int d = now.getDayOfMonth(), month = now.getMonthValue(), year = now.getYear();
+    logName = map.get("LOG_PATH")+String.format("%s_%02d_%02d_%04d_%02dH%02dMin%02dSec.txt",
+              LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
+              d, month, year, now.getHour(), now.getMinute(), now.getSecond());
+    parms.logger = new BufferedOutputStream(new FileOutputStream(logName, false));
+    log = map.get("LOGGING").charAt(0) == '1';
+    parms.log = log;
     //
-    parms = new ODBParms(logger, map.get("ODB_PATH").replace(File.separator, "/")+"/", true);
-    String charset = map.get("CHARSET");
-    if (charset != null) parms.charset = Charset.forName(charset.trim());
+    d = Integer.parseInt(map.get("DELAY"));
+    parms.delay = d > 1000? 1000:d;
     parms.userlist =  map.get("USERLIST");
     // load cluster nodes
     hostName = map.get("WEB_HOST/IP");
-    parms.primary = map.get("PRIMARY"); // port
+    parms.primary = map.get("PORT"); // port
     parms.webHostName = hostName+":"+parms.primary;
-    if (!"US_ASCII".equals(charset)) parms.charset = Charset.forName(charset);
-    parms.pool = Executors.newFixedThreadPool(Integer.parseInt(map.get("MAX_THREADS")));
-    // this.start();
-    parms.pool.execute(this);
+    d = Integer.parseInt(map.get("MAX_THREADS"));
+    if (d < 1014) d = 1024; // min. 1K threads
+    parms.pool = Executors.newFixedThreadPool(d);
+    // Start JODB server for listening
+    parms.pool.execute(() -> {
+      boolean running = false;
+      try {
+        dbSvr = ServerSocketChannel.open();
+        dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(parms.primary)));
+        dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
+        running = true; // loop until Shutdown....
+        while (true) parms.pool.execute(new ODBWorker(dbSvr.accept(), parms));
+      } catch (Exception e) { }
+      if (!running) { // something wrong with dbSvr: hostName  Port?
+        System.err.println("Cannot start JODB. Pls. check "+parms.webHostName);
+        System.exit(0);
+      }
+    });
     // start ODBBroadcaster and ODBEventListener
     parms.broadcaster =  map.get("MULTICASTING");
     parms.BC = new ODBBroadcaster(parms.broadcaster);
@@ -52,27 +66,12 @@ public class ODBService implements Runnable {
     parms.pool.execute(parms.BC);
     parms.pool.execute(parms.listener);
     odMgr = new ODBManager(parms);
-    panicShutdown( );
-  }
-  // the implemented run()
-  public void run() {
-    try {
-      dbSvr = ServerSocketChannel.open();
-      int port = Integer.parseInt(parms.primary);
-      dbSvr.socket().bind(new InetSocketAddress(hostName, port));
-      dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
-      //
-      while (running) (new ODBWorker(dbSvr.accept(), parms)).start();
-    } catch (Exception e) {
-      //e.printStackTrace();
-      if (running) {
-        System.err.println("Cannot start OODB server :"+parms.webHostName);
-        System.exit(0);
+    // Start listening for shutdown or catastrophe...
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        if (dbSvr != null) shutdown( );
       }
-    }
-    if (dbSvr != null) try {
-      dbSvr.close();
-    } catch (Exception ex) { }
+    });
   }
   /**
   getPool
@@ -82,12 +81,19 @@ public class ODBService implements Runnable {
     return parms.pool;
   }
   /**
-  @param mode boolean, true: log is enabled, false: log is disabled
+  @param enabled boolean, true: log is enabled, false: log is disabled
   */
-  public void setLog(boolean mode) {
-    parms.log = mode;
-    if (mode && parms.logger == null) logger = System.out;
+  public void setLog(boolean enabled) {
+    if (!log) log = enabled;
+    parms.log = enabled;
   }
+  /**
+  @return ODBParms
+  */
+  public ODBParms getODBParms() {
+    return parms;
+  }
+  
   /**
   removeNode a node from the cluster ring
   @param node String with the foemat HostName:Port or HostIP:Port
@@ -115,6 +121,7 @@ public class ODBService implements Runnable {
         ByteBuffer buf = ByteBuffer.allocate(32);
         //
         ios.reset();
+        // send(99, "*")
         ios.writeInt((99<<24)+0x100+0x58);
         long beg = System.currentTimeMillis();
         soc.write(ByteBuffer.wrap(ios.toByteArray()));
@@ -136,7 +143,8 @@ public class ODBService implements Runnable {
   */
   public boolean forcedClose(String dbName) throws Exception {
     boolean b = odMgr.forcedClose(dbName);
-    if (b) parms.BC.broadcast(9, parms.webHostName+(char)0x01+dbName, parms.nodes);
+    if (b) parms.BC.broadcast(9, parms.webHostName,
+                                 Arrays.asList(dbName+" is forced to close."));
     return b;
   }
   /**
@@ -149,8 +157,8 @@ public class ODBService implements Runnable {
   public boolean forcedFreeKey(String dbName, Object key) throws Exception {
     boolean b = odMgr.restoreKey("*", dbName, ios.toODBKey(key), true);
     if (b) parms.BC.broadcast(4, 
-                              parms.webHostName+(char)0x01+key+" of "+dbName+" is forced to unlock.",
-                              parms.nodes);
+                              parms.webHostName,
+                              Arrays.asList(key+" of "+dbName+" is forced to unlock."));
     return b;
   }
   /**
@@ -163,8 +171,8 @@ public class ODBService implements Runnable {
   public boolean forcedRollbackKey(String dbName, Object key) throws Exception {
     boolean b = odMgr.restoreKey("*", dbName, ios.toODBKey(key), false);
     if (b) parms.BC.broadcast(4, 
-                              parms.webHostName+(char)0x01+key+" of "+dbName+" is forced to rollback.",
-                              parms.nodes);
+                              parms.webHostName,
+                              Arrays.asList(key+" of "+dbName+" is forced to rollback."));
     return b;
   }
   /**
@@ -175,7 +183,8 @@ public class ODBService implements Runnable {
   */
   public boolean forcedFreeKeys(String dbName) throws Exception {
     boolean b = odMgr.restoreKeys("*", dbName, true);
-    if (b) parms.BC.broadcast(4, parms.webHostName+(char)0x01+"All keys of "+dbName+" are forced to unlock.", parms.nodes);
+    if (b) parms.BC.broadcast(4, parms.webHostName,
+                              Arrays.asList("All keys of "+dbName+" are forced to unlock."));
     return b;
   }
   /**
@@ -186,7 +195,8 @@ public class ODBService implements Runnable {
   */
   public boolean forcedRollback(String dbName) throws Exception {
     boolean b = odMgr.restoreKeys("*", dbName, false);
-    if (b) parms.BC.broadcast(4, parms.webHostName+(char)0x01+"All keys of "+dbName+" are forced to rollback.", parms.nodes);
+    if (b) parms.BC.broadcast(4, parms.webHostName,
+                              Arrays.asList("All keys of "+dbName+" are forced to rollback."));
     return b;
   }
   /**
@@ -209,7 +219,7 @@ public class ODBService implements Runnable {
   @param msg String, message
   */
   public void broadcast(String msg) {
-    parms.BC.broadcast(4, parms.webHostName+(char)0x01+msg, parms.nodes);
+    parms.BC.broadcast(4, parms.webHostName, Arrays.asList(msg));
   }
   /**
   dbList returns a list of active DB
@@ -246,52 +256,22 @@ public class ODBService implements Runnable {
   */
   public void shutdown() {
     try {
-      odMgr.shutdown( );
-      running = false;
       dbSvr.close();
-      if (logger != null) {
-        logger.write(("ODBManager is down."+System.lineSeparator()).getBytes());
-        logger.close();
-      }
-      // wait for the last broadcasting....
-      TimeUnit.MICROSECONDS.sleep(250);
-      // stop ODBBroadcaster
-      parms.BC.halt();
+      dbSvr = null;
+      odMgr.shutdown();
+      parms.listener.exit(); // stop Listener
+      parms.BC.exit(); // stop ODBBroadcaster
+      parms.logging("ODBService is down.");
+      parms.logger.close();
+      if (!log) (new File(logName)).delete(); 
     } catch (Exception ex) { }
     parms.pool.shutdownNow();
   }
-  /**
-  hook the panicShutdown watching dog.
-  */
-  private void panicShutdown(){
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      public void run() {
-        shutdown( );
-      }
-    });
-  }
-  private String month(int m) {
-    switch(m) {
-    case 1: return "Jan";
-    case 2: return "Feb";
-    case 3: return "Mar";
-    case 4: return "Apr";
-    case 5: return "May";
-    case 6: return "Jun";
-    case 7: return "Jul";
-    case 8: return "Aug";
-    case 9: return "Sep";
-    case 10: return "Oct";
-    case 11: return "Nov";
-    }
-    return "Dec";
-  }
   //
   private ODBIOStream ios = new ODBIOStream();
-  private volatile boolean running = true;
-  private OutputStream logger = null;
   private ServerSocketChannel dbSvr;
+  private String hostName, logName;
   private ODBManager odMgr;
-  private String hostName;
   private ODBParms parms;
+  private boolean log;
 }

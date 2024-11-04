@@ -8,6 +8,7 @@ import java.util.zip.*;
 import java.nio.*;
 import java.nio.channels.*;
 import java.util.concurrent.*;
+import java.nio.charset.Charset;
 /**
 ODBAgent Connection. Internal communication between 2 nodes (or ODBManagers)
 @author Joe T. Schwarz (c)
@@ -28,9 +29,9 @@ class ODBCluster {
   /**
   closeAgent and disconnect
   */
-  protected void closeAgent( ) {
+  protected void closeAgent(String uID) {
     try {
-      send("*", 25);
+      send("*", 25, uID);
       soc.shutdownInput();
       soc.shutdownOutput();
       soc.close();
@@ -105,18 +106,6 @@ class ODBCluster {
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
-  }
-  /**
-  update() object
-  @param dbName String, the DB name.
-  @param key String, key name
-  @param obj serialized object to be replaced
-  @return boolean true if success
-  @exception Exception thrown by JAVA
-  */
-  protected boolean update(String dbName, String key, Object obj) throws Exception {
-    send(dbName, 8, key, obj);
-    return ios.readBool();
   }
   /**
   update() object
@@ -233,10 +222,18 @@ class ODBCluster {
   /**
   connect(String aID) to JODB Server
   @param aID String, agent ID.
+  @param cs String, Character set name.
   */
-  protected void connect(String aID) {
-    try {
-      send(aID, 16);
+  protected void connect(String aID, String cs) {
+    if (!cList.contains(aID)) try {
+      if (!charsets.containsKey(aID))try {
+        charsets.put(aID, cs);
+      } catch (Exception ex) {
+        charsets.put(aID, "UTF-8");
+        cs = "UTF-8";
+      }
+      cList.add(aID);
+      send(aID, 16, cs);
     } catch (Exception ex) { }
   }
   /**
@@ -319,6 +316,7 @@ class ODBCluster {
       soc.shutdownInput();
       soc.shutdownOutput();
       soc.close();
+      charsets.clear();
     } catch (Exception ex) { }
   }
   //----------------------Superuser---------------------------------------------
@@ -341,11 +339,10 @@ class ODBCluster {
   joinNode, cmd: 97
   @param node String node (hostname:port) to be added
   */
-  protected void joinNode(String node) {
+  protected void joinNode(String node, String owner) {
     try {
-      send(node, 97);
-      disconnect();
-    } catch (Exception ex) { }
+      send(node, 97, owner);
+   } catch (Exception ex) { }
   }
   /**
   removeClient, cmd: 93
@@ -360,6 +357,9 @@ class ODBCluster {
   // note: writeToken for key as ""+key because key is here has already
   // the tag 0x00 for String, x01 for ser. Object key, x02 for long, x03 for BigInteger
   private void send(String dbName, int cmd, Object key, Object obj) throws Exception {
+    String cs = charsets.get(dbName);
+    if (cs == null) ios.setCharset("UTF-8");
+    else ios.setCharset(cs);
     ios.reset();
     ios.write(cmd);
     ios.writeToken(dbName);
@@ -370,6 +370,9 @@ class ODBCluster {
   }
   //
   private void send(String dbName, int cmd, Object key) throws Exception {
+    String cs = charsets.get(dbName);
+    if (cs == null) ios.setCharset("UTF-8");
+    else ios.setCharset(cs);
     ios.reset();
     ios.write(cmd);
     ios.writeToken(dbName);
@@ -379,6 +382,9 @@ class ODBCluster {
   }
   //
  private void send(String dbName, int cmd) throws Exception {
+    String cs = charsets.get(dbName);
+    if (cs == null) ios.setCharset("UTF-8");
+    else ios.setCharset(cs);
     ios.reset();
     ios.write(cmd);
     ios.writeToken(dbName);
@@ -389,4 +395,7 @@ class ODBCluster {
   // data area
   private SocketChannel soc;
   private ODBIOStream ios = new ODBIOStream();
+  private ArrayList<String> cList = new ArrayList<>();
+  private HashMap<String, String> charsets = new HashMap<>();
+
 }
