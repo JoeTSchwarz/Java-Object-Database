@@ -32,8 +32,10 @@ public class ServerTab implements ODBEventListening {
     //
     frame = (JFrame)map.get("frame");
     log = ((JButton)map.get("log"));
-    log.setText("LOG Enable");
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
+    logOn = prop.get("LOGGING").charAt(0) == '1';
+    if (logOn) log.setText("LOG Disable");
+    else log.setText("LOG Enable");
+    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PORT");
     report = (JTextArea) map.get("area1");
     report.setText("Report Area.\n");
     report.setEditable(false);
@@ -155,8 +157,8 @@ public class ServerTab implements ODBEventListening {
   public void odbEvent(ODBEvent e) {
     pool.execute(() -> {
       String node = e.getActiveNode();
-      if (node.equals(webHost)) return;
       int type = e.getEventType();
+      if (type != 12 && node.equals(webHost)) return;
       switch (type) {
         case 0:
           report.append(node+" is DOWN\n");
@@ -204,10 +206,14 @@ public class ServerTab implements ODBEventListening {
           report.append(node+": "+e.getMessage()+" was forced to close.\n");
           return;
         case 10: // reply from online server
-          if (nodes.contains(node) || !node.equals(e.getMessage())) return;
-          report.append(node+" is ONLINE\n");
-          nodes.add(node);
-          bPing.addItem(node);
+          if (!nodes.contains(node) && webHost.equals(e.getMessage())) {
+            report.append(node+" is ONLINE\n");
+            nodes.add(node);
+            bPing.addItem(node);
+          }
+          return;
+        case 12:
+          report.append(e.getMessage());
       }
     });
   }
@@ -238,7 +244,7 @@ public class ServerTab implements ODBEventListening {
   private HashMap<String, Object> map;
   private HashMap<String, String> prop;
   private ServerController serverController;
-  private boolean registered = false, logOn = false;
+  private boolean registered = false, logOn;
   private ArrayList<String> nodes = new ArrayList<>();
 }
 

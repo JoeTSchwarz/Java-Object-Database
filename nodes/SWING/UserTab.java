@@ -25,6 +25,13 @@ public class UserTab {
     frame = (JFrame)map.get("frame");
     report = (JTextArea) map.get("area2");
     tPri = (JFormattedTextField) map.get("pri");
+    tPri.setText("0");
+    tPri.addKeyListener(new KeyAdapter() {
+      public void keyTyped(KeyEvent e) {
+        char c = e.getKeyChar();
+        if (c < '0' || c > '3') e.consume(); 
+      }
+    });
     tID = (JTextField) map.get("tuid");
     tPW = (JPasswordField) map.get("tpw");
     lab = (JLabel) map.get("lpw");
@@ -67,6 +74,7 @@ public class UserTab {
     });
     ((JButton)map.get("uList")).addActionListener(e->{
       ArrayList<String> lst = uList.getUserList(suPW, suID);
+      report.setText("");;
       if (lst.size() > 0) {
         report.append("UserList (UserID@Privilege):\n");
         int i = 1;
@@ -113,18 +121,26 @@ public class UserTab {
       ((JLabel) map.get("lpri")).setForeground(Color.red);
       report.append("Fill the Fields with RED label then \n"+
                      "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n"+
+                     "No semicolon (:) or at (@) in PW and ID\n"+
                      "Min. 3 letters for uID and min. 4 for Password\n");
       return;
     }
     uID = tID.getText();
-    pri = Integer.parseInt(tPri.getText()); 
-    uPW = new String(tPW.getPassword()); 
-    if (pri < 0 || pri > 3 || uID.length() == 0 || uPW.length() == 0) {
-      report.append("Invalid Privilege:"+pri+" (Privilege: 0. 1, 2, 3) or UserID or UserPW. NO add.\n");
-    } else {
-      if (uList.addUser(uPW, uID, pri)) {
-        report.append("User "+uID+" is added.\n");
-      } else error("Unable to add User "+uID+"\n");
+    if (uID != null && uID.trim().length() >= 3) {
+      report.setText("");;
+      uPW = new String(tPW.getPassword()); 
+      if (uPW == null || uPW.trim().length() < 4) {
+        report.append("Invalid Privilege or UserID or UserPW. NO add.\n");
+      } else if (uList.isValid(uPW, uID) && !uList.isExisted(uID)) {
+        int pri = Integer.parseInt(tPri.getText()); 
+        if (uList.addUser(uPW, uID, pri)) {
+          report.append("User "+uID+" is added.\n");
+        } else error("Unable to add User "+uID+"\n");
+      } else {
+        if (uList.isExisted(uID)) report.append(uID+" existed already.\n");
+        else report.append("Password or userID contains invalid charater : or @\n");
+      }
     }
     but.setText("ADD");
     but.setForeground(Color.black);
@@ -143,18 +159,23 @@ public class UserTab {
       ((JLabel) map.get("lpw")).setForeground(Color.red);
       ((JLabel) map.get("luid")).setForeground(Color.red);
       report.append("Fill the Fields with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "No semicolon (:) or at (@) in PW\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     uID = tID.getText();
-    uPW = new String(tPW.getPassword()); 
-    String oPW = JOptions.password(frame, "Old UserPassword");
-    if (uID.length() == 0 || uPW.length() == 0 || oPW.length() == 0) {
-      report.append("Invalid Inputs\n");
-    } else {
-      if (uList.changePassword(uID, oPW, uPW)) {
-        report.append("Password of user "+uID+" is updated.\n");
-      } else error("Unable to change User "+uID+" password\n");
+    if (uID != null && uID.trim().length() >= 3) {
+      report.setText("");;
+      uPW = new String(tPW.getPassword()); 
+      String oPW = JOptions.password(frame, "Old UserPassword");
+      if (uPW == null || uPW.trim().length() < 4 || oPW == null || oPW.trim().length() < 4) {
+        report.append("Invalid Inputs. No change.\n");
+      } else if (uList.isValid(uPW, uID) && uList.isValid(oPW)) {
+        if (uList.changePassword(uID, oPW, uPW)) {
+          report.append("Password of user "+uID+" is changed.\n");
+        } else error("Unable to change User "+uID+" password\n");
+      } else report.append("Password contains invalid charater : or + or @\n");
     }
     but.setText("CHANGE PW");
     but.setForeground(Color.black);
@@ -173,14 +194,14 @@ public class UserTab {
       ((JLabel) map.get("luid")).setForeground(Color.red);
       ((JLabel) map.get("lpri")).setForeground(Color.red);
       report.append("Fill the Fields with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required inputs\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     uID = tID.getText();
-    pri = Integer.parseInt(tPri.getText()); 
-    if (pri < 0 || pri > 3 || uID.length() == 0 ) {
-      report.append("Invalid Privilege:"+pri+" (Privilege: 0. 1, 2, 3) or UserID or UserPW. NO add.\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.setText("");;
+      int pri = Integer.parseInt(tPri.getText()); 
       if (uList.upgradePrivilege(suPW, suID, uID, pri)) {
         report.append("Privilege of user "+uID+" is upgraded.\n");
       } else error("Unable to upgrade User "+uID+"\n");
@@ -199,17 +220,15 @@ public class UserTab {
       but.setForeground(Color.red);
       ((JLabel) map.get("luid")).setForeground(Color.red);
       report.append("Fill the Field with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required input\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     uID = tID.getText();
-    if (uID != null || uID.length() == 0 ) {
-      report.append("Invalid Privilege:"+pri+" (Privilege: 0. 1, 2, 3) or UserID or UserPW. NO add.\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.setText("");;
       String pw = uList.resetPassword(uID);
-      if (pw != null) {
-        report.append("Password of user "+uID+" is now: "+pw+"\n");
-      } else report.append("Unable to reset PW for User "+uID+"\n");
+      report.append("Password of user "+uID+" is now: "+pw+"\n");
     }
     but.setText("RESET PW");
     but.setForeground(Color.black);
@@ -225,13 +244,13 @@ public class UserTab {
       but.setForeground(Color.red);
       ((JLabel) map.get("luid")).setForeground(Color.red);
       report.append("Fill the Field with RED label then \n"+
-                     "Click OK afer completing the required inputs\n");
+                     "Click OK afer completing the required input\n"+
+                     "To CANCEL OK with empty userID field\n");
       return;
     }
     uID = tID.getText();
-    if (uID.length() == 0) {
-      report.append("Invalid UserID or UserPW. NO delete.\n");
-    } else {
+    if (uID != null && uID.trim().length() >= 3 && uList.isValid(uID)) {
+      report.setText("");;
       if (uList.deleteUser(uID)) {
         report.append("User "+uID+" is deleted.\n");
       } else error("Unable to delete User "+uID+"\n");

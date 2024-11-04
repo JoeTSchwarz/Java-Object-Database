@@ -25,8 +25,10 @@ public class ODBTab {
     ((JButton) map.get("fclose")).addActionListener(e -> {
       String dbName = JOptions.input(frame, "ForcedClose ODB (local node only)");
       if (dbName != null && dbName.length() > 0) try {
-        if (odbService.forcedClose(dbName)) report.append(dbName+" is forced to close.\n");
-        else report.append("Unknown:"+dbName+".\n");
+        if (odbService.forcedClose(dbName)) {
+          report.append(dbName+" is forced to close.\n");
+          parms.logging(dbName+" is forced to close by Superuser "+ServerController.suID);
+        } else report.append("Unknown:"+dbName+".\n");
       } catch (Exception ex) {
         report.append("ForcedClose "+dbName+":"+ex.toString()+".\n");
       }
@@ -36,8 +38,10 @@ public class ODBTab {
       if (dbName != null && dbName.length() > 0) {
         List<String> list = odbService.lockedKeyList(dbName);
         if (list.size() > 0) try {
-          if (odbService.forcedRollback(dbName)) report.append(dbName+" is forced to rollback.\n");
-          else report.append("Unable to rollback "+dbName+".\n");
+          if (odbService.forcedRollback(dbName)) {
+            report.append(dbName+" is forced to rollback.\n");
+            parms.logging(dbName+" is forced to rollback by Superuser "+ServerController.suID);
+          } else report.append("Unable to rollback "+dbName+".\n");
         } catch (Exception ex) {
           report.append("ForcedRollback "+dbName+":"+ex.toString()+".\n");
         }
@@ -51,9 +55,10 @@ public class ODBTab {
         if (list.size() > 0) {
           String key = JOptions.choice(frame, "Choose a Key:", list);
           if (key != null && key.length() > 0) try {
-            if (odbService.forcedRollbackKey(dbName, key))
+            if (odbService.forcedRollbackKey(dbName, key)) {
                  report.append(key+" of "+dbName+" is rollbacked.\n");
-            else report.append("Unable to rollback "+key+" of "+dbName+"\n");
+                 parms.logging(key.substring(1)+" of "+dbName+" is rollbacked by Superuser "+ServerController.suID);
+            } else report.append("Unable to rollback "+key+" of "+dbName+"\n");
           } catch (Exception ex) {
             report.append("ForcedRollbackKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
           }
@@ -67,9 +72,10 @@ public class ODBTab {
         if (list.size() > 0) {
           String key = JOptions.choice(frame, "Choose a Key:", list);
           if (key != null && key.length() > 0) try {
-            if (odbService.forcedFreeKey(dbName, key))
-                 report.append(key+" of "+dbName+" is freed.\n");
-            else report.append("Unable to free "+key+" of "+dbName+"\n");
+            if (odbService.forcedFreeKey(dbName, key)) {
+              report.append(key+" of "+dbName+" is freed.\n");
+              parms.logging(key.substring(1)+" of "+dbName+" is freed by Superuser "+ServerController.suID);
+            } else report.append("Unable to free "+key+" of "+dbName+"\n");
           } catch (Exception ex) {
             report.append("ForcedFreeKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
           }
@@ -81,9 +87,10 @@ public class ODBTab {
       if (dbName != null && dbName.length() > 0) {
         List<String> list = odbService.lockedKeyList(dbName);
         if (list.size() > 0) try {
-          if (odbService.forcedFreeKeys(dbName))
-               report.append("All keys of "+dbName+" are freed.\n");
-          else report.append("Unable to free all keys of "+".\n");
+          if (odbService.forcedFreeKeys(dbName)) {
+            report.append("All keys of "+dbName+" are freed.\n");
+            parms.logging("All keys of "+dbName+" are freed by Superuser "+ServerController.suID);
+          } else report.append("Unable to free all keys of "+".\n");
         } catch (Exception ex) {
           report.append("ForcedFreeKeys "+dbName+":"+ex.toString()+".\n");
         }
@@ -122,6 +129,7 @@ public class ODBTab {
   */
   public void setService(ODBService odbService) {
     this.odbService = odbService;
+    parms = odbService.getODBParms();
   }
   /**
   @param webHost String, HostName:Port of this server
@@ -131,6 +139,7 @@ public class ODBTab {
   }
   //
   private String webHost;
+  private ODBParms parms;
   private ODBService odbService;
   private HashMap<String, Object> map;
 }

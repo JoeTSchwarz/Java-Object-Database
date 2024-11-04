@@ -46,16 +46,19 @@ public class ServerController {
         tabbed.setSelectedIndex(0);
         return;
       }
+      // return aut[0]: userID, aut[1]: password
       String[] aut = JOptions.login(frame, "SuperUser Authentication");
-      if (aut[0].length() == 0 || aut[1].length() == 0) {
+      suID = aut[0];
+      if (suID.length() == 0 || aut[1].length() == 0) {
         tabbed.setSelectedIndex(0);
         return;
       }
-      if (!uList.isSuperuser(aut[1], aut[0])) {
+      if (!uList.isSuperuser(aut[1], suID)) {
         JOptionPane.showMessageDialog(frame, "You must be Superuser to open this Tab", 
                                              "ALERT", JOptionPane.ERROR_MESSAGE);
         tabbed.setSelectedIndex(0);
       }
+      if (idx == 1) userTab.authenticate(aut[1], suID);
     });
   }
   /**
@@ -66,6 +69,9 @@ public class ServerController {
     this.odbService = odbService;
     odbTab.setService(odbService);
   }
+  //
+  protected static String suID;
+  //
   private HashMap<String, String> prop;
   private HashMap<String, Object> map;
   private ODBService odbService;

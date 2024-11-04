@@ -14,7 +14,7 @@ public class JOODBServer {
   public JOODBServer(String config) throws Exception {
     Toolkit tKit = Toolkit.getDefaultToolkit();
     Image img = tKit.createImage(ClassLoader.getSystemResource("icons/oodb.jpg"));
-    SWINGLoader ml = new SWINGLoader("resources/_joodbServer_.txt",
+    SWINGLoader ml = new SWINGLoader("resources/joodbServer.txt",
                                      "ServerController", 
                                      new String[] {config}
                                     );
