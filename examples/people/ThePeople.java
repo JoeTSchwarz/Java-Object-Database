@@ -5,7 +5,7 @@ import joeapp.mvc.SWINGLoader;
 //The ThePeople in SWING_MVC View
 public class ThePeople {
   public ThePeople(String... argv) throws Exception {
-    SWINGLoader ml = new SWINGLoader("_People_.txt", 
+    SWINGLoader ml = new SWINGLoader("resources/People.txt", 
                                      "PeopleController",
                                      argv);
     ((JFrame) ml.load()).setVisible(true);
