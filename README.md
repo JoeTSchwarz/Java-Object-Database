@@ -2,7 +2,7 @@
 Java serialized Object Database or JODB
 This JODB package is a Java Object Database where the objects are usually Java serialized objects. More: see JODB.pdf
 
-NOTE: The EnDecrypt API is only secure if you and only you know the encryption/decryption algorithm, so I leave this API's encrypt and decrypt method empty and only provide you with the EnDecrypt.class if you want to use my EnDecrypt algorithm for your JODB.
+NOTE: The EnDecrypt API is only secure if you and only you know the encryption/decryption algorithm, so I leave this API's encrypt and decrypt method empty and only provide you with the EnDecrypt.class if you want to use my EnDecrypt algorithm for your JODB. The package (incl. joemvc.jar) is created and tested with JDK 9.0.4.
 
 How to run the examples and the Servers:
 
@@ -19,6 +19,6 @@ How to run the examples and the Servers:
    in lower cases) and create some userID/PW for yourself. The delivered userlist contains
    TWO default users: Superuser (admin/system) and user test/tester with privileg 2.
    Note that the default Superuser admin/system CANNOT access to the ODB Server.
-7) run "java ThePeople" (People-Example) or "java eDict" (eDict-Example) etc. using your new´
+7) run "java ThePeople" (People-Example) or "java eDict" (dDict/eDict/pDict-Example) etc. using your new´
    created userID and userPW and see how JODB works
 
