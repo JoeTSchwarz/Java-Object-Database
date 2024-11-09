@@ -350,18 +350,9 @@ public class ODBWorker implements Runnable {
           kLst = odMgr.getKeys(uID, dbName);
           boolean ok = true;
           for (String k : kLst) {
-            byte[] obj = odMgr.read(uID, dbName, k);
+            byte[] obj = odMgr.read(uID, dbName, k);odMgr.read(uID, dbName, k)
             oov.view(obj); // load the content for view
-            List<String> fNames = oov.getFieldNames();
-            if ("*".equals(key)) {               
-              for (String name:fNames) {
-                Object fv = oov.getFieldValue(name);
-                if (fv instanceof String && isFound((String)fv, pat)) sLst.add(obj);
-              }
-            } else {
-              if (!fNames.contains(key)) break;
-              if (isFound((String)oov.getFieldValue(key), pat)) sLst.add(obj);
-            }
+            if (oov.onView(key, "EQ", pat)) sLst.add(obj);             
           }
           ios.writeObjList(sLst);
           if (uID.charAt(0) != '+')
@@ -381,9 +372,9 @@ public class ODBWorker implements Runnable {
             for (String k : kLst) {
               byte[] bb = odMgr.read(uID, dbName, k);
               oov.view(bb); // load Object for viewing
-              boolean OK = onSQL(oov, tmp[1], tmp[2], tmp[3]);
+              boolean OK = oov.onView(tmp[1], tmp[2], tmp[3]);
               for (int i = 4; i < tmp.length; i += 4) { // evaluation from left to right
-                boolean o1 = onSQL(oov, tmp[i+1], tmp[i+2], tmp[i+3]);
+                boolean o1 = oov.onView(tmp[i+1], tmp[i+2], tmp[i+3]);
                 if ("or".equalsIgnoreCase(tmp[i])) {
                   if (!OK) OK = o1;
                 } else { // and
@@ -408,14 +399,8 @@ public class ODBWorker implements Runnable {
           //
           for (String k : kLst) {
             byte[] ba = odMgr.read(uID, dbName, k);
-            oov.view(ba); // load ba for viewing
-            List<String> fNames = oov.getFieldNames();
-            for (String fn : fNames) if (!oov.isArray(fn) && ("*".equals(key) || fn.equals(key))) {
-              if (compValue(oov.getFieldValue(fn), val[0], val[1])) {
-                aLst.add(ba);
-                break;
-              }
-            }
+            oov.view(ba);
+            if (oov.onView(key, val[0], val[1])) aLst.add(ba);
           }
           if (uID.charAt(0) != '+') 
             parms.logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
@@ -489,70 +474,6 @@ public class ODBWorker implements Runnable {
       soc.close();
       soc = null;
     } catch (Exception e) { }
-  }
-  // only ONE * is allowed, but more ? are possible
-  private boolean isFound(String vName, String pat) {
-    // ??... or * are in pat
-    int p = pat.indexOf("?");
-    int q = pat.indexOf("*");
-    if (p < 0 && q < 0) return vName.equals(pat);
-    StringBuilder sb = new StringBuilder(vName);
-    int ple = pat.length();
-    while (p >= 0 && p < ple) {
-      sb.replace(p, p+1,"?");
-      p = pat.indexOf("?", p+1);
-    }
-    vName = sb.toString();
-    if (q == 0) { // * or *abc
-      if (ple == 1) return true;
-      return vName.endsWith(pat.substring(q+1));
-    }
-    if (q > 0) { // abc* or ab*c
-      String fro = pat.substring(0, q);
-      if (q == (ple-1)) return vName.startsWith(fro);
-      return vName.startsWith(fro) && vName.endsWith(pat.substring(q+1));
-    }
-    return vName.equals(pat);
-  } 
-  //  
-  private boolean onSQL(ODBObjectView oov, String vName, String comp, String pat) {
-    String cmp = comp.toUpperCase();
-    List<String> fNames = oov.getFieldNames();
-    for (String fn : fNames) if (!oov.isArray(fn) && fn.equals(vName)) {
-      Object o = oov.getFieldValue(fn);
-      if (o instanceof String) 
-        return "EQ".equals(cmp)? isFound((String)o, pat):false;
-      return compValue(o, cmp, pat);
-    }
-    return false;
-  }
-  // possible exception: nummeric malformat
-  private boolean compValue(Object o, String cmp, String val) {
-    double d = 0;
-    if (o instanceof Double)      d = (Double)o;
-    else if (o instanceof Long)   d = (double)(((Long)o).longValue());
-    else if (o instanceof Integer)d = (double)(((Integer)o).intValue());
-    else if (o instanceof Float)  d = (double)(((Float)o).floatValue());
-    else if (o instanceof Short)  d = (double)(((Short)o).shortValue());
-    else { // object is BigInteger or BigDecimal
-      int r = 0;
-      if (o instanceof BigDecimal) 
-        r = ((BigDecimal)o).compareTo(new BigDecimal(new BigInteger(val)));
-      else if (o instanceof BigInteger)
-        r = ((BigInteger)o).compareTo(new BigInteger(val));
-      else return false; // wrong object
-      if ("LT".equals(cmp)) return r <  0;
-      if ("LE".equals(cmp)) return r <= 0;
-      if ("EQ".equals(cmp)) return r == 0;
-      if ("GE".equals(cmp)) return r >= 0;
-      return r > 0; // GT
-    }
-    double v = Double.parseDouble(val);
-    if ("LT".equals(cmp)) return d <  v;
-    if ("LE".equals(cmp)) return d <= v;
-    if ("EQ".equals(cmp)) return d == v;
-    if ("GE".equals(cmp)) return d >= v;
-    return d > v; // GT
   }
   // User authentication for ODBConnect
   private String authenticate(String encrypt) throws Exception {

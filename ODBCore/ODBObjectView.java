@@ -98,6 +98,287 @@ public class ODBObjectView {
     String type = tFields.get(fName);
     return (type != null && type.indexOf("[") >= 0);
   }
+  /**
+  onView of a variable corresponding to a field
+  @param vName String, variable Name (* for any field that passes the comp with pat)
+  @param comp  String, comparator (EQ, LE, LT, GE, GT)
+  @param pat   String, compared pattern or value (BigInteger, int, double, etc.)
+  @return boolean true if vName is found and meets the comparator with the given pattern or value
+  */
+  @SuppressWarnings("unchecked")
+  public boolean onView(String vName, String comp, String pat) throws Exception {
+    if (!fNames.contains(vName) && !"*".equals(vName)) return false;
+    for (String fn : fNames) if (vName.equals(fn) || "*".equals(vName)) {
+      String type = getFieldType(fn);
+      if ("Object".equals(type)) return false;
+      comp = comp.toUpperCase();
+      int a = type.indexOf("[");
+      Object obj = getFieldValue(fn);
+      if (a < 0) {
+        if (!"*".equals(vName)) {
+         if ("String".equals(type)) return "EQ".equals(comp) && isFound((String)obj, pat);
+         else return compValue(obj, comp, pat);
+        } else { // wild card
+          if ("String".equals(type) && "EQ".equals(comp) && isFound((String)obj, pat)) return true;
+          else  if (type.endsWith("List")) {
+            for (Object o : (List) obj) {
+              if (o instanceof String) {
+                if ("EQ".equals(comp) && isFound((String)o, pat)) return true;
+              } else if (compValue(o, comp, pat)) return true;
+            }
+            return false;
+          } else try {
+            if (compValue(obj, comp, pat)) return true;
+          } catch (Exception ex) { }
+        }
+      } else {
+        a = type.indexOf("][");
+        if (type.indexOf("int") >= 0) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              int[][] aa = (int[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              int[][][] aa = (int[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            int[] aa = (int[]) obj;
+            for (int i = 0; i < aa.length; ++i) 
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.startsWith("Integer")) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              Integer[][] aa = (Integer[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              Integer[][][] aa = (Integer[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            Integer[] aa = (Integer[]) obj;
+            for (int i = 0; i < aa.length; ++i) 
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.indexOf("long") >= 0) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              long[][] aa = (long[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              long[][][] aa = (long[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            long[] aa = (long[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.startsWith("Long")) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              Long[][] aa = (Long[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              Long[][][] aa = (Long[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            Long[] aa = (Long[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.indexOf("short") >= 0) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              short[][] aa = (short[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              short[][][] aa = (short[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            short[] aa = (short[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.indexOf("dou") >= 0) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              double[][] aa = (double[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                   if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              double[][][] aa = (double[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            double[] aa = (double[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.startsWith("Double")) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              Double[][] aa = (Double[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              Double[][][] aa = (Double[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            Double[] aa = (Double[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.indexOf("flo") >= 0) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              float[][] aa = (float[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              float[][][] aa = (float[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            float[] aa = (float[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.startsWith("Float")) {
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              Float[][] aa = (Float[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              Float[][][] aa = (Float[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j], comp, pat)) return true;
+            }
+          } else {
+            Float[] aa = (Float[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.indexOf("String") >= 0) {
+          if (!"EQ".equals(comp)) return false;
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              String[][] aa = (String[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (isFound(aa[i][j], pat)) return true;
+            } else {
+              String[][][] aa = (String[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (isFound(aa[i][j][l], pat)) return true;
+            }
+          } else {
+            String[] aa = (String[]) obj;
+            for (int i = 0; i < aa.length; ++i) 
+              if (isFound(aa[i], pat)) return true;
+          }
+        } else if (type.startsWith("BigI")) {
+           if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              BigInteger[][] aa = (BigInteger[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              BigInteger[][][] aa = (BigInteger[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            BigInteger[] aa = (BigInteger[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } else if (type.startsWith("BigD")) {
+           if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              BigDecimal[][] aa = (BigDecimal[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  if (compValue(aa[i][j], comp, pat)) return true;
+            } else {
+              BigDecimal[][][] aa = (BigDecimal[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l)
+                    if (compValue(aa[i][j][l], comp, pat)) return true;
+            }
+          } else {
+            BigDecimal[] aa = (BigDecimal[]) obj;
+            for (int i = 0; i < aa.length; ++i)
+              if (compValue(aa[i], comp, pat)) return true;
+          }
+        } 
+      }        
+    }
+    return false;
+  }
   //----------------------------------------------------------------------------------
   // private constructor
   private ODBObjectView(byte[] bb, int q, int ref) throws Exception {
@@ -213,13 +494,13 @@ public class ODBObjectView {
               } else {
                 int oRef = ++ref;
                 ODBObjectView ov = new ODBObjectView(bb, p+2, ref);
-                Map<Integer, Object> map = ov.getVRef();
+                Map<Integer, Object> map = getVRef();
                 if (map.size() > 0) map.forEach(vRef::putIfAbsent);
                 tFields.put(n, "Object");
                 vRef.put(oRef, ov);
                 vFields.put(n, ov);
-                p = ov.getIndex();
-                ref = ov.getRef();
+                p = getIndex();
+                ref = getRef();
               }
             } else if (t.endsWith("Integer") || t.endsWith("Decimal") || t.endsWith("List") || 
                        t.endsWith("Double") || t.endsWith("Float") || t.endsWith("Long") ||
@@ -651,7 +932,7 @@ public class ODBObjectView {
         default: // unsupported array
           if (bb[p] == TC_OBJECT && bb[p+1] == TC_CLASSDESC) {
             ODBObjectView ov = new ODBObjectView(bb, p+2, ref);
-            p = ov.getIndex();
+            p = getIndex();
           }
           int l = t.indexOf("[L");
           String nt = l >= 0? t.substring(l+2):t;
@@ -1096,6 +1377,58 @@ public class ODBObjectView {
       }        
     }
     return q;
+  }
+  // only ONE * is allowed, but more ? are possible
+  private boolean isFound(String vName, String pat) {
+    // ??... or * are in pat
+    int p = pat.indexOf("?");
+    int q = pat.indexOf("*");
+    if (p < 0 && q < 0) return vName.equals(pat);
+    StringBuilder sb = new StringBuilder(vName);
+    int ple = pat.length();
+    while (p >= 0 && p < ple) {
+      sb.replace(p, p+1,"?");
+      p = pat.indexOf("?", p+1);
+    }
+    vName = sb.toString();
+    if (q == 0) { // * or *abc
+      if (ple == 1) return true;
+      return vName.endsWith(pat.substring(q+1));
+    }
+    if (q > 0) { // abc* or ab*c
+      String fro = pat.substring(0, q);
+      if (q == (ple-1)) return vName.startsWith(fro);
+      return vName.startsWith(fro) && vName.endsWith(pat.substring(q+1));
+    }
+    return vName.equals(pat);
+  } 
+  // possible exception: nummeric malformat
+  private boolean compValue(Object o, String cmp, String val) {
+    double d = 0;
+    if (o instanceof Double)      d = (Double)o;
+    else if (o instanceof Long)   d = (double)(((Long)o).longValue());
+    else if (o instanceof Integer)d = (double)(((Integer)o).intValue());
+    else if (o instanceof Float)  d = (double)(((Float)o).floatValue());
+    else if (o instanceof Short)  d = (double)(((Short)o).shortValue());
+    else { // object is BigInteger or BigDecimal
+      int r = 0;
+      if (o instanceof BigDecimal) 
+        r = ((BigDecimal)o).compareTo(new BigDecimal(new BigInteger(val)));
+      else if (o instanceof BigInteger)
+        r = ((BigInteger)o).compareTo(new BigInteger(val));
+      else return false; // wrong object
+      if ("LT".equals(cmp)) return r <  0;
+      if ("LE".equals(cmp)) return r <= 0;
+      if ("EQ".equals(cmp)) return r == 0;
+      if ("GE".equals(cmp)) return r >= 0;
+      return r > 0; // GT
+    }
+    double v = Double.parseDouble(val);
+    if ("LT".equals(cmp)) return d <  v;
+    if ("LE".equals(cmp)) return d <= v;
+    if ("EQ".equals(cmp)) return d == v;
+    if ("GE".equals(cmp)) return d >= v;
+    return d > v; // GT
   }
   // Serializeation protocol
   final byte x00 = (byte)0x00;
