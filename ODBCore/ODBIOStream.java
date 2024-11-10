@@ -90,7 +90,7 @@ public class ODBIOStream {
   public String toODBKey(Object key) throws IOException {
     // key Tag: 0x00 for String as key
     if (key instanceof String) {
-      if (((String)key).charAt(0) < (char)0x00) return (String)key;
+      if (((String)key).charAt(0) < (char)0x03) return (String)key;
       return ((char)0x00+((String)key));
     }
     // key Tag: 0x01 for long/Long as key
