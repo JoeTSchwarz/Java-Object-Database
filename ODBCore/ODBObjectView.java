@@ -99,7 +99,7 @@ public class ODBObjectView {
     return (type != null && type.indexOf("[") >= 0);
   }
   /**
-  viewVar: view a variable corresponding to a ,field
+  viewVar: view a variable corresponding to a field
   @param vName String, variable Name (* for any field that passes the comp with pat)
   @param comp  String, comparator (EQ, LE, LT, GE, GT)
   @param pat   String, compared pattern or value (BigInteger, int, double, etc.)
