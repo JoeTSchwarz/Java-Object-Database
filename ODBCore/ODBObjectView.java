@@ -99,40 +99,44 @@ public class ODBObjectView {
     return (type != null && type.indexOf("[") >= 0);
   }
   /**
-  onView of a variable corresponding to a field
+  viewVar: view a variable corresponding to a ,field
   @param vName String, variable Name (* for any field that passes the comp with pat)
   @param comp  String, comparator (EQ, LE, LT, GE, GT)
   @param pat   String, compared pattern or value (BigInteger, int, double, etc.)
   @return boolean true if vName is found and meets the comparator with the given pattern or value
   */
   @SuppressWarnings("unchecked")
-  public boolean onView(String vName, String comp, String pat) throws Exception {
-    if (!fNames.contains(vName) && !"*".equals(vName)) return false;
-    for (String fn : fNames) if (vName.equals(fn) || "*".equals(vName)) {
+  public boolean viewVar(String vName, String comp, String pat) throws Exception {
+    comp = comp.toUpperCase();
+    for (String fn : fNames) if (fn.equals(vName) || "*".equals(vName)) {
       String type = getFieldType(fn);
-      if ("Object".equals(type)) return false;
-      comp = comp.toUpperCase();
-      int a = type.indexOf("[");
       Object obj = getFieldValue(fn);
-      if (a < 0) {
-        if (!"*".equals(vName)) {
-         if ("String".equals(type)) return "EQ".equals(comp) && isFound((String)obj, pat);
-         else return compValue(obj, comp, pat);
-        } else { // wild card
-          if ("String".equals(type) && "EQ".equals(comp) && isFound((String)obj, pat)) return true;
-          else  if (type.endsWith("List")) {
+      if (type.indexOf("[") < 0) {
+        if (!"*".equals(vName)) { // all fields ?
+          if ("String".equals(type)) return "EQ".equals(comp) && isFound((String)obj, pat);
+          else if (type.endsWith("List")) { // List or ArrayList
             for (Object o : (List) obj) {
               if (o instanceof String) {
                 if ("EQ".equals(comp) && isFound((String)o, pat)) return true;
               } else if (compValue(o, comp, pat)) return true;
             }
-            return false;
-          } else try {
+          } else if (!"Object".equals(type)) return compValue(obj, comp, pat);
+          return false;
+        } else { // all fields
+          if ("String".equals(type)) {
+            if ("EQ".equals(comp) && isFound((String)obj, pat)) return true;
+          } else if (type.endsWith("List")) { // List or ArrayList
+            for (Object o : (List) obj) {
+              if (o instanceof String) {
+                if ("EQ".equals(comp) && isFound((String)o, pat)) return true;
+              } else if (compValue(o, comp, pat)) return true;
+            }
+          } else if (!"Object".equals(type)) {
             if (compValue(obj, comp, pat)) return true;
-          } catch (Exception ex) { }
+          }
         }
       } else {
-        a = type.indexOf("][");
+        int a = type.indexOf("][");
         if (type.indexOf("int") >= 0) {
           if (a > 0) {
             a = type.indexOf("][", a+2);

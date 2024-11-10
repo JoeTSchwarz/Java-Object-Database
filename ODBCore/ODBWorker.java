@@ -350,9 +350,9 @@ public class ODBWorker implements Runnable {
           kLst = odMgr.getKeys(uID, dbName);
           boolean ok = true;
           for (String k : kLst) {
-            byte[] obj = odMgr.read(uID, dbName, k);odMgr.read(uID, dbName, k)
+            byte[] obj = odMgr.read(uID, dbName, k);odMgr.read(uID, dbName, k);
             oov.view(obj); // load the content for view
-            if (oov.onView(key, "EQ", pat)) sLst.add(obj);             
+            if (oov.viewVar(key, "EQ", pat)) sLst.add(obj);             
           }
           ios.writeObjList(sLst);
           if (uID.charAt(0) != '+')
@@ -372,9 +372,9 @@ public class ODBWorker implements Runnable {
             for (String k : kLst) {
               byte[] bb = odMgr.read(uID, dbName, k);
               oov.view(bb); // load Object for viewing
-              boolean OK = oov.onView(tmp[1], tmp[2], tmp[3]);
+              boolean OK = oov.viewVar(tmp[1], tmp[2], tmp[3]);
               for (int i = 4; i < tmp.length; i += 4) { // evaluation from left to right
-                boolean o1 = oov.onView(tmp[i+1], tmp[i+2], tmp[i+3]);
+                boolean o1 = oov.viewVar(tmp[i+1], tmp[i+2], tmp[i+3]);
                 if ("or".equalsIgnoreCase(tmp[i])) {
                   if (!OK) OK = o1;
                 } else { // and
@@ -400,7 +400,7 @@ public class ODBWorker implements Runnable {
           for (String k : kLst) {
             byte[] ba = odMgr.read(uID, dbName, k);
             oov.view(ba);
-            if (oov.onView(key, val[0], val[1])) aLst.add(ba);
+            if (oov.viewVar(key, val[0], val[1])) aLst.add(ba);
           }
           if (uID.charAt(0) != '+') 
             parms.logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
