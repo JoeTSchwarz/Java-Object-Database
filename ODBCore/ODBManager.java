@@ -628,6 +628,8 @@ public class ODBManager implements ODBEventListening {
     TimeUnit.MILLISECONDS.sleep(parms.delay);
     // close all active workers on this node
     for (ODBWorker w:workers) w.exit();
+    // wait for all workers exit
+    TimeUnit.MILLISECONDS.sleep(parms.delay);
   }
   /**
   remove a node from cluster
