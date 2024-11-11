@@ -308,25 +308,26 @@ public class ODBObjectView {
               if (compValue(aa[i], comp, pat)) return true;
           }
         } else if (type.indexOf("String") >= 0) {
-          if (!"EQ".equals(comp)) return false;
-          if (a > 0) {
-            a = type.indexOf("][", a+2);
-            if (a < 0) {
-              String[][] aa = (String[][]) obj;
-              for (int i = 0; i < aa.length; ++i)
-                for (int j = 0; j < aa[i].length; ++j)
-                  if (isFound(aa[i][j], pat)) return true;
+          if ("EQ".equals(comp)) {
+            if (a > 0) {
+              a = type.indexOf("][", a+2);
+              if (a < 0) {
+                String[][] aa = (String[][]) obj;
+                for (int i = 0; i < aa.length; ++i)
+                  for (int j = 0; j < aa[i].length; ++j)
+                    if (isFound(aa[i][j], pat)) return true;
+              } else {
+                String[][][] aa = (String[][][]) obj;
+                for (int i = 0; i < aa.length; ++i)
+                  for (int j = 0; j < aa[i].length; ++j)
+                    for (int l = 0; l < aa[i][j].length; ++l)
+                      if (isFound(aa[i][j][l], pat)) return true;
+              }
             } else {
-              String[][][] aa = (String[][][]) obj;
-              for (int i = 0; i < aa.length; ++i)
-                for (int j = 0; j < aa[i].length; ++j)
-                  for (int l = 0; l < aa[i][j].length; ++l)
-                    if (isFound(aa[i][j][l], pat)) return true;
+              String[] aa = (String[]) obj;
+              for (int i = 0; i < aa.length; ++i) 
+                if (isFound(aa[i], pat)) return true;
             }
-          } else {
-            String[] aa = (String[]) obj;
-            for (int i = 0; i < aa.length; ++i) 
-              if (isFound(aa[i], pat)) return true;
           }
         } else if (type.startsWith("BigI")) {
            if (a > 0) {
