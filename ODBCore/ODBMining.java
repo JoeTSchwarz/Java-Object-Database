@@ -182,13 +182,13 @@ public class ODBMining extends ODBConnect {
         throw new Exception("Invalid SQL expression:"+sql);
       for (int i = 4; i < tmp.length; i += 4) {
         tmp[i] = tmp[i].toUpperCase();
-        if (!"and".equals(tmp[i]) && !"or".equals(tmp[i]))
+        if (!"AND".equals(tmp[i]) && !"OR".equals(tmp[i]))
           throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
       }
       for (int i = 2; i < tmp.length; i += 4) {
         tmp[i] = tmp[i].toUpperCase();
-        if (!"lt".equals(tmp[i]) && !"le".equals(tmp[i]) && !"eq".equals(tmp[i]) && !"ge".equals(tmp[i]) &&
-            !"gt".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
+        if (!"LT".equals(tmp[i]) && !"LE".equals(tmp[i]) && !"EQ".equals(tmp[i]) && !"GE".equals(tmp[i]) &&
+            !"GT".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
       }
       //
       StringBuilder sb = new StringBuilder(tmp[0]);
