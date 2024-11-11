@@ -17,7 +17,6 @@ public class ODBMining extends ODBConnect {
     <br>Note:
     <br>- Serialized POJO object as key must have an implemented equals-method
     <br>- Leading or trailing spaces are consisdered as part of a string
-    <br>- Array variable is not supported by SQL and SELECT operations 
     <br>- By select with comparator (EQ/LT/LE/GT/GE) EQ is the only choice if comp. value is a string
     @param dbHost String, Host of JODB Server
     @param port   int, port number
@@ -126,7 +125,6 @@ public class ODBMining extends ODBConnect {
     /**
     SelectAll return all serialized objects that match the given string pattern
     <br>Pattern with wildcard * for a string or ? for 1 letter can be used (e.g. J*y or Jo?y)
-    <br>Multiple ? or * is NOT allowed.
     <br>Example:  selectAll(dbName, "Joe") or selectAll(dbName, "J?e")
     @param dbName  String, Database Name
     @param pat     String, the selecting pattern
@@ -140,9 +138,8 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects with the vName that matches the pattern.
     <br>Note:
-    <br>- vName must be a String instance. Otherwise the returned list has NO element.
+    <br>- varName is case-sensitive and must match one of the serialized Object's field names
     <br>- Pattern with wildcard * for a string or ? for 1 letter can be used (e.g. J*y or Jo?y)
-    <br>- Multiple ? or * is NOT allowed.
     <br>Example: selectAll(dbName, vName, "Joe") or selectAll(dbName, vName, "J*e")
     @param dbName  String, Database Name
     @param vName   String, variable Name (non array variable)
@@ -166,9 +163,9 @@ public class ODBMining extends ODBConnect {
     <br>Conjunction: Comparison_1 and/or comparison_2 and/or ....
     <br>value can contain wildcard *, ? if it is a string (otherwise: exception)
     <br>Note:
+    <br>- varName is case-sensitive and must match one of the serialized Object's field names
     <br>- Float or double must be led by 0 if it is less than 1. Exp.: 0.123
     <br>- Negative value is preceded by a hyphen (MINUS sign). Positive sign (+) can be omitted.
-    <br>- VarName must be a non-array variable
     <br>- Comparator of VarName of string instance can only be EQ. Otherwise the returned list has NO0 element.
     <br>- value of primitive/BigInteger/BigDecimal must be nummeric. Otherwise the returned list has NO element.
     <br>- value of String instance must be a String (e.g. for an 1 = ""+1). Otherwise the returned list has NO element.
@@ -180,15 +177,23 @@ public class ODBMining extends ODBConnect {
     // 0      1     2  3     4   5     6  7     8  9     10 11    ...
     // select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
     public ArrayList<Object> SQL(String dbName, String sql) throws Exception {
-      String tmp[] = sql.toLowerCase().trim().split("[ ]+"); // ignore space and discard ""
+      String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
       if (tmp.length < 4 || (tmp.length % 4) > 0 || !"select".equals(tmp[0]))
         throw new Exception("Invalid SQL expression:"+sql);
-      for (int i = 4; i < tmp.length; i += 4) if (!"and".equals(tmp[i]) && !"or".equals(tmp[i]))
-        throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
-      for (int i = 2; i < tmp.length; i += 4) 
+      for (int i = 4; i < tmp.length; i += 4) {
+        tmp[i] = tmp[i].toUpperCase();
+        if (!"and".equals(tmp[i]) && !"or".equals(tmp[i]))
+          throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
+      }
+      for (int i = 2; i < tmp.length; i += 4) {
+        tmp[i] = tmp[i].toUpperCase();
         if (!"lt".equals(tmp[i]) && !"le".equals(tmp[i]) && !"eq".equals(tmp[i]) && !"ge".equals(tmp[i]) &&
             !"gt".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
-      send(dbName, 35, sql.trim());
+      }
+      //
+      StringBuilder sb = new StringBuilder(tmp[0]);
+      for (int i = 1; i < tmp.length; ++i) sb.append(" "+tmp[i]);
+      send(dbName, 35, sb.toString());
       return ios.readObjList(); 
     }      
     /**
@@ -204,6 +209,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -229,6 +235,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the POJO's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -253,6 +260,7 @@ public class ODBMining extends ODBConnect {
     return selectAll(dbName, "*", comp,  val);    }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -278,6 +286,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -303,6 +312,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -328,6 +338,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
@@ -353,6 +364,7 @@ public class ODBMining extends ODBConnect {
     }
     /**
     Select all objects that match the criterion of value
+    <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
     @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater

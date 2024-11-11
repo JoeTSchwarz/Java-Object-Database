@@ -110,7 +110,6 @@ public class ODBObjectView {
   @SuppressWarnings("unchecked")
   public boolean viewVar(byte[] bb, String vName, String comp, String pat) throws Exception {
     if (bb != null) view(bb);
-    comp = comp.toUpperCase();
     for (String fn : fNames) if (fn.equals(vName) || "*".equals(vName)) {
       String type = getFieldType(fn);
       Object obj = getFieldValue(fn);

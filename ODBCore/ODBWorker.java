@@ -371,11 +371,10 @@ public class ODBWorker implements Runnable {
               byte[] bb = odMgr.read(uID, dbName, k);
               boolean OK = oov.viewVar(bb, tmp[1], tmp[2], tmp[3]);
               for (int i = 4; i < tmp.length; i += 4) { // evaluation from left to right
-                boolean o1 = oov.viewVar(null, tmp[i+1], tmp[i+2], tmp[i+3]);
-                if ("or".equalsIgnoreCase(tmp[i])) {
-                  if (!OK) OK = o1;
+               if ("or".equalsIgnoreCase(tmp[i])) {
+                  if (!OK) OK = oov.viewVar(null, tmp[i+1], tmp[i+2], tmp[i+3]);
                 } else { // and
-                  OK = OK && o1;
+                  OK = OK && oov.viewVar(null, tmp[i+1], tmp[i+2], tmp[i+3]);
                 }
               }
               if (OK) qLst.add(bb);
