@@ -179,8 +179,6 @@ public class ODBMining extends ODBConnect {
     // 0      1     2  3     4   5     6  7     8  9     10 11    ...
     // select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
     public ArrayList<Object> SQL(String dbName, String sql) throws Exception {
-      sql = sql.trim().replace(">", "GT").replace(">=", "GE").replace("<", "LT").
-            replace("<=", "LE").replace("==", "EQ").replace("!=", "NE");
       String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
       if (tmp.length < 4 || (tmp.length % 4) > 0 || !"select".equals(tmp[0]))
         throw new Exception("Invalid SQL expression:"+sql);
@@ -189,11 +187,7 @@ public class ODBMining extends ODBConnect {
         if (!"AND".equals(tmp[i]) && !"OR".equals(tmp[i]))
           throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
       }
-      for (int i = 2; i < tmp.length; i += 4) {
-        tmp[i] = tmp[i].toUpperCase();
-        if (!"LT".equals(tmp[i]) && !"LE".equals(tmp[i]) && !"EQ".equals(tmp[i]) && !"NE".equals(tmp[i]) &&
-            !"GE".equals(tmp[i]) && !"GT".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
-      }
+      for (int i = 2; i < tmp.length; i += 4) tmp[i] = onComparator(tmp[i]);
       //
       StringBuilder sb = new StringBuilder(tmp[0]);
       for (int i = 1; i < tmp.length; ++i) sb.append(" "+tmp[i]);
@@ -209,7 +203,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, double val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
@@ -235,7 +229,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, float val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
@@ -261,7 +255,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, BigDecimal val) throws Exception {      
-    return selectAll(dbName, "*", comp,  val);    }
+    return selectAll(dbName, "*", onComparator(comp),  val);    }
     /**
     Select all objects that match the criterion of value
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
@@ -286,7 +280,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, BigInteger val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
@@ -312,7 +306,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, long val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
@@ -338,7 +332,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, int val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
@@ -364,7 +358,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName is null or Exception from JODB Server
     */
     public ArrayList<Object> selectAll(String dbName, String comp, short val) throws Exception {
-      return selectAll(dbName, "*", comp,  val);
+      return selectAll(dbName, "*", onComparator(comp),  val);
     }
     /**
     Select all objects that match the criterion of value
