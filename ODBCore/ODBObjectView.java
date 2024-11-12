@@ -115,13 +115,11 @@ public class ODBObjectView {
       Object obj = getFieldValue(fn);
       if (type.indexOf("[") < 0) {
         if ("String".equals(type)) {
-          if ("EQ".equals(comp) && isFound((String)obj, pat)) return true;
+          if (isFound((String)obj, comp, pat)) return true;
         } else if (type.endsWith("List")) { // List or ArrayList
           for (Object o : (List) obj) {
             if (o instanceof String) {
-              boolean OK = isFound((String)o, pat);
-              if ("EQ".equals(comp) && OK) return true;
-              else if ("NE".equals(comp) && !OK) return true;
+              if (isFound((String)o, comp, pat)) return true;
             } else if (compValue(o, comp, pat)) return true;
           }
         } else if (!"Object".equals(type)) try {
@@ -310,26 +308,21 @@ public class ODBObjectView {
               if (compValue(aa[i], comp, pat)) return true;
           }
         } else if (type.indexOf("String") >= 0) {
-          boolean OK = false;
           if (a > 0) {
             a = type.indexOf("][", a+2);
             if (a < 0) {
               String[][] aa = (String[][]) obj;
               for (int i = 0; i < aa.length; ++i)
-                for (int j = 0; j < aa[i].length; ++j) OK = isFound(aa[i][j], pat);
+                for (int j = 0; j < aa[i].length; ++j) if (isFound(aa[i][j], comp, pat)) return true;
             } else {
               String[][][] aa = (String[][][]) obj;
               for (int i = 0; i < aa.length; ++i)
                 for (int j = 0; j < aa[i].length; ++j)
-                  for (int l = 0; l < aa[i][j].length; ++l) OK = isFound(aa[i][j][l], pat);
+                  for (int l = 0; l < aa[i][j].length; ++l) if (isFound(aa[i][j][l], comp, pat)) return true;
             }
-            if ("EQ".equals(comp) && OK) return true;
-            else if ("NE".equals(comp) && !OK) return true;
           } else {
             String[] aa = (String[]) obj;
-            for (int i = 0; i < aa.length; ++i) OK = isFound(aa[i], pat);
-            if ("EQ".equals(comp) && OK) return true;
-            else if ("NE".equals(comp) && !OK) return true;
+            for (int i = 0; i < aa.length; ++i) if (isFound(aa[i], comp, pat)) return true;
           }
         } else if (type.startsWith("BigI")) {
            if (a > 0) {
@@ -1377,28 +1370,35 @@ public class ODBObjectView {
     return q;
   }
   // only ONE * is allowed, but more ? are possible
-  private boolean isFound(String vName, String pat) {
+  private boolean isFound(String vName, String comp, String pat) {
+    boolean OK = false;
     // ??... or * are in pat
     int p = pat.indexOf("?");
     int q = pat.indexOf("*");
-    if (p < 0 && q < 0) return vName.equals(pat);
-    StringBuilder sb = new StringBuilder(vName);
-    int ple = pat.length();
-    while (p >= 0 && p < ple) {
-      sb.replace(p, p+1,"?");
-      p = pat.indexOf("?", p+1);
+    if (p < 0 && q < 0) {
+      OK = vName.equals(pat);
+    } else {
+      StringBuilder sb = new StringBuilder(vName);
+      int ple = pat.length();
+      while (p >= 0 && p < ple) {
+        sb.replace(p, p+1,"?");
+        p = pat.indexOf("?", p+1);
+      }
+      vName = sb.toString();
+      if (q == 0) { // * or *abc
+        if (ple == 1) OK = true;
+        else OK = vName.endsWith(pat.substring(q+1));
+      } else {
+        if (q > 0) { // abc* or ab*c
+          String fro = pat.substring(0, q);
+          if (q == (ple-1)) OK = vName.startsWith(fro);
+          else OK = vName.startsWith(fro) && vName.endsWith(pat.substring(q+1));
+        } else OK = vName.equals(pat);
+      }
     }
-    vName = sb.toString();
-    if (q == 0) { // * or *abc
-      if (ple == 1) return true;
-      return vName.endsWith(pat.substring(q+1));
-    }
-    if (q > 0) { // abc* or ab*c
-      String fro = pat.substring(0, q);
-      if (q == (ple-1)) return vName.startsWith(fro);
-      return vName.startsWith(fro) && vName.endsWith(pat.substring(q+1));
-    }
-    return vName.equals(pat);
+    if ("EQ".equals(comp)) return OK;
+    if ("NE".equals(comp)) return !OK;
+    return false;
   } 
   // possible exception: nummeric malformat
   private boolean compValue(Object o, String cmp, String val) {
@@ -1418,6 +1418,7 @@ public class ODBObjectView {
       if ("LT".equals(cmp)) return r <  0;
       if ("LE".equals(cmp)) return r <= 0;
       if ("EQ".equals(cmp)) return r == 0;
+      if ("NE".equals(cmp)) return r != 0;
       if ("GE".equals(cmp)) return r >= 0;
       return r > 0; // GT
     }
@@ -1425,6 +1426,7 @@ public class ODBObjectView {
     if ("LT".equals(cmp)) return d <  v;
     if ("LE".equals(cmp)) return d <= v;
     if ("EQ".equals(cmp)) return d == v;
+    if ("NE".equals(cmp)) return d != v;
     if ("GE".equals(cmp)) return d >= v;
     return d > v; // GT
   }
