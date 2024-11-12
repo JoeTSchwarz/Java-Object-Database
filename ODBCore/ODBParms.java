@@ -11,9 +11,7 @@ import java.util.concurrent.*;
 public class ODBParms {
   /**
   Constructor. Global parameters for JODB
-  @param logger OutputStream, null if no logger
   @param db_path String, path to JODB files
-  @param active boolean, true if active
   */
   public ODBParms(String db_path) {
     this.db_path = db_path;

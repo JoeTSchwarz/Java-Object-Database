@@ -17,7 +17,9 @@ public class ODBMining extends ODBConnect {
     <br>Note:
     <br>- Serialized POJO object as key must have an implemented equals-method
     <br>- Leading or trailing spaces are consisdered as part of a string
-    <br>- By select with comparator (EQ/LT/LE/GT/GE) EQ is the only choice if comp. value is a string
+    <br>- By select with comparator:EQ/NE/LT/LE/GT/GE 
+    <br>- or &lt;/&lt;&#61;/&#61;&#61;/&#33;&#61;/&gt;&#61;/&gt;
+    <br>- EQ and NE are the only choices if comp value is a string
     @param dbHost String, Host of JODB Server
     @param port   int, port number
     @param pw String, User's password
@@ -156,7 +158,7 @@ public class ODBMining extends ODBConnect {
     <br>A SQL-like statement is for example:
     <br>"select varName_1 eq value_1 and varName_2 gt value_2"
     <br>"select varName_1 eq value_1 or  varName_2 gt value_2"
-    <br>Conjunctor (and, or), Comparator (lt, le, eq, gt, ge) can be in upper or lower case.
+    <br>Conjunctor (and, or), Comparator (lt, le, eq, ne, gt, ge) can be in upper or lower case.
     <br>Exception is arisen if Conjunctor or Comparator is invalid.
     <br>Rules: 
     <br>Comparison: Var_1 Comparator Var_2
@@ -177,6 +179,8 @@ public class ODBMining extends ODBConnect {
     // 0      1     2  3     4   5     6  7     8  9     10 11    ...
     // select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
     public ArrayList<Object> SQL(String dbName, String sql) throws Exception {
+      sql = sql.trim().replace(">", "GT").replace(">=", "GE").replace("<", "LT").
+            replace("<=", "LE").replace("==", "EQ").replace("!=", "NE");
       String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
       if (tmp.length < 4 || (tmp.length % 4) > 0 || !"select".equals(tmp[0]))
         throw new Exception("Invalid SQL expression:"+sql);
@@ -187,8 +191,8 @@ public class ODBMining extends ODBConnect {
       }
       for (int i = 2; i < tmp.length; i += 4) {
         tmp[i] = tmp[i].toUpperCase();
-        if (!"LT".equals(tmp[i]) && !"LE".equals(tmp[i]) && !"EQ".equals(tmp[i]) && !"GE".equals(tmp[i]) &&
-            !"GT".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
+        if (!"LT".equals(tmp[i]) && !"LE".equals(tmp[i]) && !"EQ".equals(tmp[i]) && !"NE".equals(tmp[i]) &&
+            !"GE".equals(tmp[i]) && !"GT".equals(tmp[i])) throw new Exception(tmp[i]+" is invalid in SQL expression:"+sql);
       }
       //
       StringBuilder sb = new StringBuilder(tmp[0]);
@@ -199,7 +203,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    double, comparing value
     @return arrayList of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -212,7 +216,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    double, comparing value
     @return arrayList of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -225,7 +229,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    float, comparing value
     @return arrayList of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -238,7 +242,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the POJO's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    float, comparing value
     @return arrayList of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -251,7 +255,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    BigDecimal, comparing value
     @return arraylits of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -263,7 +267,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    BigDecimal, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -276,7 +280,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    BigInteger, comparing value
     @return arraylits of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -289,7 +293,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    BigInteger, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -302,7 +306,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    BigInteger, comparing value
     @return arraylits of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -315,7 +319,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    long, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -328,7 +332,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    int, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -341,7 +345,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    int, comparing value
     @return arraylist all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -354,7 +358,7 @@ public class ODBMining extends ODBConnect {
     /**
     select all objects that match the criterion of value
     @param dbName String, Database name
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    short, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -367,7 +371,7 @@ public class ODBMining extends ODBConnect {
     <br>Note: varName is case-sensitive and must match one of the serialized Object's field names
     @param dbName String, Database name
     @param vName  String, Variable name (non array variable)
-    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, GE: GreaterEqual, GT: Greater
+    @param comp   String, LT: Less, LE: LessEqual, EQ: Equal, NE: Not Equal, GE: GreaterEqual, GT: Greater
     @param val    short, comparing value
     @return arraylist of all objects that match the criterion.
     @exception Exception if dbName is null or Exception from JODB Server
@@ -451,8 +455,14 @@ public class ODBMining extends ODBConnect {
     //
     private String onComparator(String comp) throws Exception {
       String com = comp.trim().toUpperCase();
-      if ("LT".equals(com) || "LE".equals(com) || "EQ".equals(com) ||
+      if ("LT".equals(com) || "LE".equals(com) || "EQ".equals(com) || "NE".equals(com) ||
           "GE".equals(com) || "GT".equals(com)) return com;
+      if ("<".equals(com))  return "LT";
+      if ("<=".equals(com)) return "LE";
+      if ("==".equals(com)) return "EQ";
+      if ("!=".equals(com)) return "NE";
+      if (">=".equals(com)) return "GE";
+      if (">".equals(com))  return "GT";
       throw new Exception("Invalid comparator: "+comp);
     }
 }

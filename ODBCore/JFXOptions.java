@@ -346,7 +346,6 @@ public class JFXOptions {
   }
   /**
   @param msg String
-  @return boolean true if OK is selected
   */
   public void warning(String msg) {
     Alert alert = new Alert(AlertType.WARNING);

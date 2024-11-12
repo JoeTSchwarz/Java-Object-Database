@@ -495,7 +495,7 @@ public class ODBConnect {
   /**
   notify() request for notify in case of add/delete/update if enabled = true, else disable
   @param dbName String, the DB name.
-  @param enables boolean, true: enable, false: disable (default)
+  @param enabled boolean, true: enable, false: disable (default)
   */
   public void notify(String dbName, boolean enabled) {
     try {

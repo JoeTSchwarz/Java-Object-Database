@@ -119,7 +119,9 @@ public class ODBObjectView {
         } else if (type.endsWith("List")) { // List or ArrayList
           for (Object o : (List) obj) {
             if (o instanceof String) {
-              if ("EQ".equals(comp) && isFound((String)o, pat)) return true;
+              boolean OK = isFound((String)o, pat);
+              if ("EQ".equals(comp) && OK) return true;
+              else if ("NE".equals(comp) && !OK) return true;
             } else if (compValue(o, comp, pat)) return true;
           }
         } else if (!"Object".equals(type)) try {
@@ -308,26 +310,26 @@ public class ODBObjectView {
               if (compValue(aa[i], comp, pat)) return true;
           }
         } else if (type.indexOf("String") >= 0) {
-          if ("EQ".equals(comp)) {
-            if (a > 0) {
-              a = type.indexOf("][", a+2);
-              if (a < 0) {
-                String[][] aa = (String[][]) obj;
-                for (int i = 0; i < aa.length; ++i)
-                  for (int j = 0; j < aa[i].length; ++j)
-                    if (isFound(aa[i][j], pat)) return true;
-              } else {
-                String[][][] aa = (String[][][]) obj;
-                for (int i = 0; i < aa.length; ++i)
-                  for (int j = 0; j < aa[i].length; ++j)
-                    for (int l = 0; l < aa[i][j].length; ++l)
-                      if (isFound(aa[i][j][l], pat)) return true;
-              }
+          boolean OK = false;
+          if (a > 0) {
+            a = type.indexOf("][", a+2);
+            if (a < 0) {
+              String[][] aa = (String[][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j) OK = isFound(aa[i][j], pat);
             } else {
-              String[] aa = (String[]) obj;
-              for (int i = 0; i < aa.length; ++i) 
-                if (isFound(aa[i], pat)) return true;
+              String[][][] aa = (String[][][]) obj;
+              for (int i = 0; i < aa.length; ++i)
+                for (int j = 0; j < aa[i].length; ++j)
+                  for (int l = 0; l < aa[i][j].length; ++l) OK = isFound(aa[i][j][l], pat);
             }
+            if ("EQ".equals(comp) && OK) return true;
+            else if ("NE".equals(comp) && !OK) return true;
+          } else {
+            String[] aa = (String[]) obj;
+            for (int i = 0; i < aa.length; ++i) OK = isFound(aa[i], pat);
+            if ("EQ".equals(comp) && OK) return true;
+            else if ("NE".equals(comp) && !OK) return true;
           }
         } else if (type.startsWith("BigI")) {
            if (a > 0) {

@@ -85,6 +85,7 @@ public class ODBIOStream {
   /**
   toODBKey convert a key to ODBKey
   @param key Object of type String, long, BigInteger
+  @return String of normalized key
   @exception IOException thrown by JAVA
   */
   public String toODBKey(Object key) throws IOException {

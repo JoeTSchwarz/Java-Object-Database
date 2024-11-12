@@ -119,7 +119,8 @@ public class ODBManager implements ODBEventListening {
   }
   /**
   bindAgent() - bind dbAgents. Invoked by ODBWorker-ODBConnect/connect
-  @param aID String
+  @param aID String, agent ID
+  @param cSet String, character set name
   */
   public void bindAgent(String aID, String cSet) {
     for (ODBCluster odbc:cluster) odbc.connect(aID, cSet);
@@ -169,6 +170,7 @@ public class ODBManager implements ODBEventListening {
   }
   /**
   getCharset()
+  @param dbName String
   @return String Charset Name if set, else null
   */
   public String getCharset(String dbName) {
