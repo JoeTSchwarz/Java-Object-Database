@@ -62,7 +62,7 @@ public class UserList {
   */
   public boolean isValid(String pw, String uid) {
     return (pw != null && pw.indexOf(":") < 0 && pw.indexOf("@") < 0 && pw.length() >= 3 && 
-            uid != null && uid.indexOf(":") < 0 && uid.indexOf("@") >= 0 && uid.length() >= 3);
+            uid != null && uid.indexOf(":") < 0 && uid.indexOf("@") < 0 && uid.length() >= 3);
   }
   /**
   isExisted - uID exists?
@@ -112,9 +112,11 @@ public class UserList {
   @return int 0: readOnly, 1: ReadWrite, 2: RradWriteDelete, 3: SuperUser. -1 if user is unknown
   */
   public int getPrivilege(String pw, String uid) {
-    if (isValid(pw, uid) && isUser(pw, uid)) {
+    if (isUser(pw, uid)) {
       String pwid = pw+":"+uid+"@";
-      for (String u : uList) if (u.indexOf(pwid) == 0) return u.charAt(u.length()-1) & 0x0F;
+      for (String u : uList) {
+        if (u.indexOf(pwid) == 0) return u.charAt(u.length()-1) & 0x0F;
+      }
     }
     return -1;
   }

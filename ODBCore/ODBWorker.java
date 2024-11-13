@@ -67,7 +67,7 @@ public class ODBWorker implements Runnable {
           if (key == null) {
             odMgr.uIDList.add(uID);
             odMgr.workers.add(this);
-            ios.writeMsg(priv+uID+"/"+parms.broadcaster);
+            ios.writeMsg(priv+"/"+uID+"/"+parms.broadcaster);
             if (uID.charAt(0) != '+') parms.logging(uID+" is connected."); // abs. Path
             ios.writeBool(true);
             break;

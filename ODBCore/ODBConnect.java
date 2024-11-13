@@ -37,10 +37,10 @@ public class ODBConnect {
       close();
       throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/ID.");
     }
-    enc = ios.readMsg();
-    priv = enc.charAt(0) & 0x0F;
-    user = enc.substring(1).split("/");
-    listener = new ODBEventListener(user[1]);
+    String[] s = ios.readMsg().split("/");
+    priv = Integer.parseInt(s[0]);
+    user = s[1];
+    listener = new ODBEventListener(s[2]);
     pool.execute(listener);
     // start Shutdown listener
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -77,7 +77,7 @@ public class ODBConnect {
   @return String, ID of this connection, ID or null on NO connection to this dbName
   */
   public String getID() {
-    return user[0];
+    return user;
   }
   /**
   getDBList of this connection
@@ -589,7 +589,7 @@ public class ODBConnect {
   }
   // data area
   protected int priv;
-  protected String[] user;
+  protected String user;
   protected SocketChannel soc;
   protected ODBEventListener listener;
   protected boolean autoCommit = false;
