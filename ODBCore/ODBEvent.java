@@ -28,6 +28,16 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 public class ODBEvent {
   /**
   Constructor
+  @param msg  String, format: Owner_Msg_List
+  */
+  public ODBEvent(String msg) {
+    message = msg;
+    nodes = null;
+    node = null;
+    type = -1;
+  }
+  /**
+  Constructor
   @param type int, message type
   @param msg  String, format: Owner_Msg_List
   */

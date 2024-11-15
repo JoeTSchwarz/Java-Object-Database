@@ -33,6 +33,12 @@ public class ODBBroadcaster implements Runnable {
     this.host_port = host_port;
   }
   /**
+  @param msg String, message
+  */
+  public void broadcast(String msg) {
+    msgLst.add(msg.getBytes());
+  }
+  /**
   @param cmd int, send command type
   @param msg String, message
   @param nodes String, arrayList of nodes on cluster
