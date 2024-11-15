@@ -399,7 +399,7 @@ public class ODBMining extends ODBConnect {
     */
     public ArrayList<String> getFieldNames(String dbName, String keyName) throws Exception {
       ArrayList<String> lst = new ArrayList<String>();
-      Field[] fds = read(dbName, keyName).getClass().getDeclaredFields();
+      Field[] fds = read(dbName, ios.toODBKey(keyName)).getClass().getDeclaredFields();
       for (Field f: fds) lst.add(f.getName());
       return lst;
     }
@@ -433,7 +433,7 @@ public class ODBMining extends ODBConnect {
     @exception Exception if dbName or pattern is null or Exception from JODB Server
     */
     public String getClassName(String dbName, String keyName) throws Exception {
-      send(dbName, 37, keyName);
+      send(dbName, 37, ios.toODBKey(keyName));
       return ios.readMsg(); 
     }
     /**
