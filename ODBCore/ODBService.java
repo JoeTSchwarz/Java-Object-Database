@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.time.*;
 import java.util.*;
+import java.math.BigInteger;
 import java.util.concurrent.*;
 //
 import java.nio.*;
@@ -155,7 +156,15 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedFreeKey(String dbName, Object key) throws Exception {
-    boolean b = odMgr.restoreKey("*", dbName, ios.toODBKey(key), true);
+    String k = (String)key;
+    // key Tag: 0x00 for String as key
+    if (key instanceof String)
+      if (k.charAt(0) > (char)0x02) k = (char)0x00+k;
+    // key Tag: 0x01 for long/Long as key
+    if (key.getClass().getName().equals("Long")) k = (char)0x01+""+(long)key;
+    // key Tag: 0x02 for BigInteger as key
+    if (key.getClass().getName().equals("BigInteger")) k = (char)0x02+((BigInteger)key).toString();
+    boolean b = odMgr.restoreKey("*", dbName, k, true);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to unlock."));
@@ -169,7 +178,15 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedRollbackKey(String dbName, Object key) throws Exception {
-    boolean b = odMgr.restoreKey("*", dbName, ios.toODBKey(key), false);
+    String k = (String)key;
+    // key Tag: 0x00 for String as key
+    if (key instanceof String)
+      if (k.charAt(0) > (char)0x02) k = (char)0x00+k;
+    // key Tag: 0x01 for long/Long as key
+    if (key.getClass().getName().equals("Long")) k = (char)0x01+""+(long)key;
+    // key Tag: 0x02 for BigInteger as key
+    if (key.getClass().getName().equals("BigInteger")) k = (char)0x02+((BigInteger)key).toString();
+    boolean b = odMgr.restoreKey("*", dbName, k, false);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to rollback."));

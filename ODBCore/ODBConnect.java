@@ -147,7 +147,7 @@ public class ODBConnect {
   @exception Exception thrown by JAVA
   */
   public void add(String dbName, Object key, Object obj) throws Exception {
-    if (priv > 0) send(dbName, 6, ios.toODBKey(key), obj);
+    if (priv > 0) send(dbName, 6, key, obj);
     else throw new Exception("ADD Privilege: 1. Yours: 0");
   }
   /**
@@ -172,7 +172,7 @@ public class ODBConnect {
   */
   public boolean update(String dbName, Object key, Object obj) throws Exception {
     if (priv == 0) throw new Exception("UPDATE Privilege: 1. Yours: 0");
-    send(dbName, 8, ios.toODBKey(key), obj);
+    send(dbName, 8, key, obj);
     return ios.readBool();
   }
   /**
@@ -184,7 +184,7 @@ public class ODBConnect {
   */
   public boolean delete(String dbName, Object key) throws Exception {
     if (priv < 2) throw new Exception("DELETE Privilege: 2. Yours: "+priv);
-    send(dbName, 9, ios.toODBKey(key));
+    send(dbName, 9, key);
     return ios.readBool();
     
   }
@@ -196,7 +196,7 @@ public class ODBConnect {
   @exception Exception thrown by JAVA
   */
   public Object read(String dbName, Object key) throws Exception {
-    send(dbName, 10, ios.toODBKey(key));
+    send(dbName, 10, key);
     byte[] bb = ios.readObj();
     if (bb[0] == (byte)0xAC && bb[1] == (byte)0xED) { // serialized object
       //ObjectInputStream oi = new ObjectInputStream(new ByteArrayInputStream(bb));
@@ -215,7 +215,7 @@ public class ODBConnect {
   @exception Exception thrown by JAVA
   */
   public byte[] readBytes(String dbName, Object key) throws Exception {
-    send(dbName, 10, ios.toODBKey(key));
+    send(dbName, 10, key);
     return (byte[]) ios.readObj();
   }
   /**
@@ -226,7 +226,7 @@ public class ODBConnect {
   */
   public boolean isExisted(String dbName, Object key) {
     try {
-      send(dbName, 11, ios.toODBKey(key));
+      send(dbName, 11, key);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -239,7 +239,7 @@ public class ODBConnect {
   */
   public boolean isLocked(String dbName, Object key) {
     try {
-      send(dbName, 12, ios.toODBKey(key));
+      send(dbName, 12, key);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -253,7 +253,7 @@ public class ODBConnect {
   */
   public boolean lock(String dbName, Object key) {
     if (priv > 0) try {
-      send(dbName, 13, ios.toODBKey(key));
+      send(dbName, 13, key);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -266,7 +266,7 @@ public class ODBConnect {
   */
   public boolean unlock(String dbName, Object key) {
     if (priv > 0) try {
-      send(dbName, 14, ios.toODBKey(key));
+      send(dbName, 14, key);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -280,7 +280,7 @@ public class ODBConnect {
   */
   public boolean rollback(String dbName, Object key) throws Exception {
     if (priv > 0) try {
-      send(dbName, 15, ios.toODBKey(key));
+      send(dbName, 15, key);
       return ios.readBool();
     } catch (Exception ex) {
       throw new Exception(ex.toString());
@@ -363,7 +363,7 @@ public class ODBConnect {
   */
   public boolean xDelete(String dbName, Object key) throws Exception {
     if (priv < 2) throw new Exception("DELETE Privilege: 2. Yours: "+priv);
-    send(dbName, 20, ios.toODBKey(key));
+    send(dbName, 20, key);
     return ios.readBool();
   }
   /**
@@ -376,7 +376,7 @@ public class ODBConnect {
   */
   public boolean xUpdate(String dbName, Object key, Object object) throws Exception {
     if (priv < 1) throw new Exception("UPDATE Privilege: 1. Yours: 0");
-    send(dbName, 21, ios.toODBKey(key), object);
+    send(dbName, 21, key, object);
     return ios.readBool();
   }
   /**
@@ -388,7 +388,7 @@ public class ODBConnect {
   */
   public boolean commit(String dbName, Object key) throws Exception {
     if (priv > 0) try {
-      send(dbName, 22, ios.toODBKey(key));
+      send(dbName, 22, key);
       return ios.readBool();
     } catch (Exception ex) {
       throw new Exception(ex.toString());
@@ -418,7 +418,7 @@ public class ODBConnect {
   */
   public String lockedBy(String dbName, Object key) {
     try {
-      send(dbName, 24, ios.toODBKey(key));
+      send(dbName, 24, key);
       String uid = ios.readMsg();
       if (uid.charAt(0) != '?') return uid;
     } catch (Exception ex) { }
@@ -457,7 +457,7 @@ public class ODBConnect {
   */
   public boolean isKeyFree(String dbName, Object key) {
     try {
-      send(dbName, 28, ios.toODBKey(key));
+      send(dbName, 28, key);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
@@ -472,7 +472,7 @@ public class ODBConnect {
   */
   public void add(String dbName, Object key, Object obj, String node) throws Exception {
     if (priv > 0) {
-      send(dbName, 29, ios.toODBKey(key)+"+"+node, obj);
+      send(dbName, 29, key+"+"+node, obj);
     } else throw new Exception("ADD Privilege: 1. Yours: 0");
   }
   /**
@@ -540,27 +540,27 @@ public class ODBConnect {
     return utf;
   }
   //--------------------------------------------------------------------------
-  protected void send(String dbName, int cmd, String key, Object obj) throws Exception {
+  protected void send(String dbName, int cmd, Object key, Object obj) throws Exception {
     if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or obj/key is null");
     ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
     ios.write(cmd);
     ios.writeToken(dbName);
-    ios.writeToken(key);
+    ios.writeKey(key);
     ios.write(obj);
     ios.write(soc);
     ios.getSoc(soc); // read the content from soc
   }
   // Check dbName and key
-  protected void send(String dbName, int cmd, String key) throws Exception {
+  protected void send(String dbName, int cmd, Object key) throws Exception {
     if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or key is null");
     ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
     ios.write(cmd);
     ios.writeToken(dbName);
-    ios.writeToken(key);
+    ios.writeKey(key);
     ios.write(soc);
     ios.getSoc(soc); // read the content from soc
   }

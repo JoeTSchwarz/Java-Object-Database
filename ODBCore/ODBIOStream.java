@@ -83,26 +83,26 @@ public class ODBIOStream {
     pos += le;
   }  
   /**
-  toODBKey convert a key to ODBKey
+  writeKey
   @param key Object of type String, long, BigInteger
-  @return String of normalized key
   @exception IOException thrown by JAVA
   */
-  public String toODBKey(Object key) throws IOException {
+  public void writeKey(Object key) throws Exception {
+    String k = null;
     // key Tag: 0x00 for String as key
     if (key instanceof String) {
-      if (((String)key).charAt(0) < (char)0x03) return (String)key;
-      return ((char)0x00+((String)key));
-    }
+      if (((String)key).charAt(0) > (char)0x02) k = (char)0x00+((String)key);
+      else k = (String)key;
+    } else
     // key Tag: 0x01 for long/Long as key
     if (key.getClass().getName().equals("java.lang.Long")) {
-      return (char)0x01+""+(long)key;
-    } 
+      k = (char)0x01+""+(long)key;
+    } else
     // key Tag: 0x02 for BigInteger as key
     if (key.getClass().getName().equals("java.math.BigInteger")) {
-      return ((char)0x02+key.toString());
+      k = (char)0x02+((BigInteger)key).toString();
     }
-    throw new IOException("Unsupported Object key");
+    writeToken(k);
   }
   /**
   write
