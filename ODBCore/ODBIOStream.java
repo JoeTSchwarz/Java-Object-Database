@@ -88,21 +88,24 @@ public class ODBIOStream {
   @exception IOException thrown by JAVA
   */
   public void writeKey(Object key) throws Exception {
-    String k = null;
-    // key Tag: 0x00 for String as key
-    if (key instanceof String) {
-      if (((String)key).charAt(0) > (char)0x02) k = (char)0x00+((String)key);
-      else k = (String)key;
-    } else
-    // key Tag: 0x01 for long/Long as key
-    if (key.getClass().getName().equals("java.lang.Long")) {
-      k = (char)0x01+""+(long)key;
-    } else
-    // key Tag: 0x02 for BigInteger as key
-    if (key.getClass().getName().equals("java.math.BigInteger")) {
-      k = (char)0x02+((BigInteger)key).toString();
+    writeToken(odbKey(key));
+  }
+  /**
+  convert to ODBKey
+  @param key Object key either String or long or BigInteger
+  @return String in ODB format
+  @exception Exception if key is not the mentioned type of String or long or BigInteger
+  */
+  public static String odbKey(Object key) throws Exception {
+    if (key instanceof String) { // key Tag: 0x00 for String as key
+      if (((String)key).charAt(0) > (char)0x02) return (char)0x00+((String)key);
+      return (String)key;
     }
-    writeToken(k);
+    // key Tag: 0x01 for long/Long as key
+    if (key.getClass().getName().equals("Long")) return (char)0x01+""+(long)key;
+    // key Tag: 0x02 for BigInteger as key
+    if (key.getClass().getName().equals("BigInteger")) return (char)0x02+((BigInteger)key).toString();
+    throw new Exception("Invalid key:"+key);
   }
   /**
   write
