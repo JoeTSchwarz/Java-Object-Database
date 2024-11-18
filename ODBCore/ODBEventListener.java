@@ -22,6 +22,7 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 <br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
 <br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
 <br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
+<br>13: Customized message. Format: 13, message; 
 <br>rest is reserved for future use
 @author Joe T. Schwarz
 */
@@ -63,9 +64,9 @@ public class ODBEventListener implements Runnable {
         DatagramPacket packet = new DatagramPacket(new byte[256], 256);
         mcs.receive(packet); // wait for the incoming msg
         pool.submit(() -> {
-          byte[] buf =  packet.getData(); 
-          ODBEvent event = buf[0] > (byte)0x1F ? new ODBEvent(new String(buf, 0, packet.getLength())):
-                           new ODBEvent((int) (buf[0] & 0xFF), new String(buf, 1, packet.getLength()-1));
+          byte[] buf =  packet.getData();
+          // buf[0] > 0x1F: customized message
+          ODBEvent event = new ODBEvent((int)buf[0], new String(buf, 1, packet.getLength()-1));
           for (ODBEventListening odbe : set) odbe.odbEvent(event);
         });
       }

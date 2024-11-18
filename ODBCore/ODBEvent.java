@@ -22,20 +22,11 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 <br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
 <br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
 <br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
+<br>13: Customized message. Format: 13, message; 
 <br>rest is reserved for future use
 @author Joe T. Schwarz
 */
 public class ODBEvent {
-  /**
-  Constructor
-  @param msg  String, format: Owner_Msg_List
-  */
-  public ODBEvent(String msg) {
-    message = msg;
-    nodes = null;
-    node = null;
-    type = -1;
-  }
   /**
   Constructor
   @param type int, message type
@@ -43,9 +34,15 @@ public class ODBEvent {
   */
   public ODBEvent(int type, String msg) {
     this.type = type; // Owner_Msg_List
-    nodes = msg.split(""+(char)0x01);
-    message = nodes[1];
-    node = nodes[0];
+    if (type == 0x0D) {
+      message = msg;
+      nodes = null;
+      node = null;
+    } else {
+      nodes = msg.split(""+(char)0x01);
+      message = nodes[1];
+      node = nodes[0];
+    }
   }
   /**
   getNodes

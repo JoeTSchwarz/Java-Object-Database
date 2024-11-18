@@ -21,6 +21,7 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 <br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
 <br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
 <br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
+<br>13: Customized message. Format: 13, message; 
 <br>rest is reserved for future use
 @author Joe T. Schwarz
 */
@@ -33,12 +34,14 @@ public class ODBBroadcaster implements Runnable {
     this.host_port = host_port;
   }
   /**
+  customized message Broadcasting
   @param msg String, message
   */
   public void broadcast(String msg) {
-    msgLst.add(msg.getBytes());
+    msgLst.add(((char)0x0D+msg).getBytes( ));
   }
   /**
+  ODB internal message broadcasting
   @param cmd int, send command type
   @param msg String, message
   @param nodes String, arrayList of nodes on cluster
@@ -47,7 +50,7 @@ public class ODBBroadcaster implements Runnable {
     StringBuilder sb = new StringBuilder((char)(cmd & 0xFF)+msg+(char)0x01);
     if (nodes.size() > 0) for (String node:nodes) sb.append(node+(char)0x01);
     else sb.append("*"+(char)0x01); // dummy node
-    msgLst.add(sb.toString().getBytes());
+    msgLst.add(sb.toString().getBytes( ));
   }
   // called by ODBService
   public void exit() {
