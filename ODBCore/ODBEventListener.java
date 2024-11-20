@@ -64,9 +64,7 @@ public class ODBEventListener implements Runnable {
         DatagramPacket packet = new DatagramPacket(new byte[256], 256);
         mcs.receive(packet); // wait for the incoming msg
         pool.submit(() -> {
-          byte[] buf =  packet.getData();
-          // buf[0] > 0x1F: customized message
-          ODBEvent event = new ODBEvent((int)buf[0], new String(buf, 1, packet.getLength()-1));
+          ODBEvent event = new ODBEvent(packet.getData());
           for (ODBEventListening odbe : set) odbe.odbEvent(event);
         });
       }

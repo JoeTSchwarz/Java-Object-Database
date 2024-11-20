@@ -29,17 +29,16 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 public class ODBEvent {
   /**
   Constructor
-  @param type int, message type
-  @param msg  String, format: Owner_Msg_List
+  @param bb byte array containing information and message
   */
-  public ODBEvent(int type, String msg) {
-    this.type = type; // Owner_Msg_List
-    if (type == 0x0D) {
-      message = msg;
+  public ODBEvent(byte[] bb) {
+    this.type = (int)(bb[0] & 0xFF);
+    if (type == 13) {
+      message = new String(bb, 1, bb.length-1).trim();
       nodes = null;
       node = null;
     } else {
-      nodes = msg.split(""+(char)0x01);
+      nodes = (new String(bb, 1, bb.length-1)).split(""+(char)0x01);
       message = nodes[1];
       node = nodes[0];
     }
