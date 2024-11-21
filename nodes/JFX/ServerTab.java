@@ -148,7 +148,7 @@ public class ServerTab implements Initializable, ODBEventListening {
     Platform.runLater(() -> {
       String node = e.getActiveNode();
       int type = e.getEventType();
-      if (type != 12 && node.equals(webHost)) return;
+      if (type == 13 || type != 12 && node.equals(webHost)) return;
       //
       switch (type) {
         case 0:
