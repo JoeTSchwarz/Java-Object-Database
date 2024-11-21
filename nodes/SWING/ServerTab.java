@@ -158,7 +158,7 @@ public class ServerTab implements ODBEventListening {
     pool.execute(() -> {
       String node = e.getActiveNode();
       int type = e.getEventType();
-      if (type != 12 && node.equals(webHost)) return;
+      if (type == 13 || type != 12 && node.equals(webHost)) return;
       switch (type) {
         case 0:
           report.append(node+" is DOWN\n");
