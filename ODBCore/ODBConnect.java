@@ -39,9 +39,8 @@ public class ODBConnect {
     }
     String[] s = ios.readMsg().split("/");
     priv = Integer.parseInt(s[0]);
+    multicast = s[2];
     user = s[1];
-    listener = new ODBEventListener(s[2]);
-    pool.execute(listener);
     // start Shutdown listener
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
@@ -98,6 +97,10 @@ public class ODBConnect {
   @param odbe Object with implemented ODBEventListening
   */
   public void register(ODBEventListening odbe) {
+    if (listener == null) {
+      listener = new ODBEventListener(multicast);
+      pool.execute(listener);
+    }
     listener.addListener(odbe);
   }
   /**
@@ -503,6 +506,24 @@ public class ODBConnect {
     } catch (Exception ex) { }
   }
   /**
+  getPool() returns the ExecutorService Pool with max. 128 threads
+  @return ExecutorService
+  */
+  public ExecutorService getPool() {
+    return pool;
+  }
+  /**
+  broadcast() a customized message
+  @param msg String, the message
+  */
+  public void broadcast(String msg) {
+    if (sender == null) {
+      sender = new ODBBroadcaster(multicast);
+      pool.execute(sender);
+    }
+    sender.broadcast(msg);
+  }
+  /**
   sendMsg() send a message to JODB
   @param msg String, the message
   */
@@ -582,19 +603,21 @@ public class ODBConnect {
       soc.shutdownInput();
       soc.close();
     } catch (Exception ex) { }
-    listener.exit();
-    pool.shutdownNow();
+    soc = null; // discard soc 
+    if (sender != null) sender.exit();
+    if (listener != null) listener.exit();
     charsets.clear();
-    soc = null;
+    pool.shutdownNow();
   }
   // data area
   protected int priv;
-  protected String user;
   protected SocketChannel soc;
+  protected ODBBroadcaster sender;
+  protected String user, multicast;
   protected ODBEventListener listener;
   protected boolean autoCommit = false;
   protected ODBIOStream ios = new ODBIOStream();
   protected ArrayList<String> dbLst = new ArrayList<>();
   protected HashMap<String, String> charsets = new HashMap<>();
-  protected ExecutorService pool = Executors.newFixedThreadPool(10);
+  protected ExecutorService pool = Executors.newFixedThreadPool(128);
 }

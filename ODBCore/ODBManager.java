@@ -59,9 +59,8 @@ public class ODBManager implements ODBEventListening {
   public void odbEvent(final ODBEvent event) {
     parms.pool.execute(()->{
       String node = event.getActiveNode();
-      if (node.equals(parms.webHostName)) return;
-      //
       int type = event.getEventType();
+      if (type == 13 || node.equals(parms.webHostName)) return;
       // 0: node down, 7: removeNode, 8: detachedNode
       if (type == 0 || type == 7 || type == 8) {
         removeNode(node);

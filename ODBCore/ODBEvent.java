@@ -1,4 +1,5 @@
 package joeapp.odb;
+//
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -29,16 +30,17 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 public class ODBEvent {
   /**
   Constructor
-  @param bb byte array containing information and message
+  @param packet DatagramPacket packet (from ODBEventListener) containing information and message
   */
-  public ODBEvent(byte[] bb) {
-    this.type = (int)(bb[0] & 0xFF);
+  public ODBEvent(DatagramPacket packet) {
+    byte[] buf =  packet.getData();
+    this.type = (int)(buf[0] & 0xFF);
     if (type == 13) {
-      message = new String(bb, 1, bb.length-1).trim();
+      message = new String(buf, 1, packet.getLength()-1);
       nodes = null;
       node = null;
     } else {
-      nodes = (new String(bb, 1, bb.length-1)).split(""+(char)0x01);
+      nodes = (new String(buf, 1, packet.getLength()-1)).split(""+(char)0x01);
       message = nodes[1];
       node = nodes[0];
     }
