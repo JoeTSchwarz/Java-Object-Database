@@ -37,10 +37,9 @@ public class ODBConnect {
       close();
       throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/ID.");
     }
-    String[] s = ios.readMsg().split("/");
-    priv = Integer.parseInt(s[0]);
-    multicast = s[2];
-    user = s[1];
+    // data[0]: privilege, data[1]: userID, data[2]: MulticastIP:MulticastPort 
+    data = ios.readMsg().split("/");
+    priv = Integer.parseInt(data[0]);
     // start Shutdown listener
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
@@ -76,7 +75,8 @@ public class ODBConnect {
   @return String, ID of this connection, ID or null on NO connection to this dbName
   */
   public String getID() {
-    return user;
+    // data[1]: ODB-UserID 
+    return data[1];
   }
   /**
   getDBList of this connection
@@ -98,7 +98,8 @@ public class ODBConnect {
   */
   public void register(ODBEventListening odbe) {
     if (listener == null) {
-      listener = new ODBEventListener(multicast);
+      // data[2]: MulticastIP:MulticastPort 
+      listener = new ODBEventListener(data[2]);
       pool.execute(listener);
     }
     listener.addListener(odbe);
@@ -518,7 +519,8 @@ public class ODBConnect {
   */
   public void broadcast(String msg) {
     if (sender == null) {
-      sender = new ODBBroadcaster(multicast);
+      // data[2]: MulticastIP:MulticastPort 
+      sender = new ODBBroadcaster(data[2]);
       pool.execute(sender);
     }
     sender.broadcast(msg);
@@ -598,22 +600,22 @@ public class ODBConnect {
   }
   //--------------------------------------------------------------------------
   private void close() {
+    if (sender != null) sender.exit();
+    if (listener != null) listener.exit();
     try {     
       soc.shutdownOutput();
       soc.shutdownInput();
       soc.close();
+      TimeUnit.MILLISECONDS.sleep(100);
     } catch (Exception ex) { }
     soc = null; // discard soc 
-    if (sender != null) sender.exit();
-    if (listener != null) listener.exit();
-    charsets.clear();
     pool.shutdownNow();
   }
   // data area
   protected int priv;
+  protected String data[];
   protected SocketChannel soc;
   protected ODBBroadcaster sender;
-  protected String user, multicast;
   protected ODBEventListener listener;
   protected boolean autoCommit = false;
   protected ODBIOStream ios = new ODBIOStream();

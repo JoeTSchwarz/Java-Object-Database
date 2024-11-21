@@ -264,7 +264,8 @@ public class ODBService {
       parms.BC.exit(); // stop ODBBroadcaster
       parms.logging("ODBService is down.");
       parms.logger.close();
-      if (!log) (new File(logName)).delete(); 
+      if (!log) (new File(logName)).delete();
+      TimeUnit.MILLISECONDS.sleep(parms.delay);
     } catch (Exception ex) { }
     parms.pool.shutdownNow();
   }
