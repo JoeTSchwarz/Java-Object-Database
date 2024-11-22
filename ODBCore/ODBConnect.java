@@ -97,6 +97,7 @@ public class ODBConnect {
   @param odbe Object with implemented ODBEventListening
   */
   public void register(ODBEventListening odbe) {
+    if (pool == null) pool = Executors.newFixedThreadPool(128);
     if (listener == null) {
       // data[2]: MulticastIP:MulticastPort 
       listener = new ODBEventListener(data[2]);
@@ -511,6 +512,7 @@ public class ODBConnect {
   @return ExecutorService
   */
   public ExecutorService getPool() {
+    if (pool == null) pool = Executors.newFixedThreadPool(128);
     return pool;
   }
   /**
@@ -518,6 +520,7 @@ public class ODBConnect {
   @param msg String, the message
   */
   public void broadcast(String msg) {
+    if (pool == null) pool = Executors.newFixedThreadPool(128);
     if (sender == null) {
       // data[2]: MulticastIP:MulticastPort 
       sender = new ODBBroadcaster(data[2]);
@@ -600,26 +603,29 @@ public class ODBConnect {
   }
   //--------------------------------------------------------------------------
   private void close() {
-    if (sender != null) sender.exit();
-    if (listener != null) listener.exit();
-    try {     
+    if (soc != null) try {     
+      if (pool != null) {
+        if (sender != null) sender.exit();
+        if (listener != null) listener.exit();
+        TimeUnit.MILLISECONDS.sleep(10);
+        pool.shutdownNow();
+        pool = null;
+      }
       soc.shutdownOutput();
       soc.shutdownInput();
       soc.close();
-      TimeUnit.MILLISECONDS.sleep(100);
+      soc = null;
     } catch (Exception ex) { }
-    soc = null; // discard soc 
-    pool.shutdownNow();
   }
   // data area
   protected int priv;
   protected String data[];
   protected SocketChannel soc;
+  protected ExecutorService pool;
   protected ODBBroadcaster sender;
   protected ODBEventListener listener;
   protected boolean autoCommit = false;
   protected ODBIOStream ios = new ODBIOStream();
   protected ArrayList<String> dbLst = new ArrayList<>();
   protected HashMap<String, String> charsets = new HashMap<>();
-  protected ExecutorService pool = Executors.newFixedThreadPool(128);
 }

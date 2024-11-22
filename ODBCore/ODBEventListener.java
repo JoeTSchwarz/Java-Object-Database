@@ -77,6 +77,6 @@ public class ODBEventListener implements Runnable {
   }
   private String host_port;
   private MulticastSocket mcs;
-  private ExecutorService pool = Executors.newFixedThreadPool(16);
+  private ExecutorService pool = Executors.newCachedThreadPool();
   private volatile Set<ODBEventListening> set = new CopyOnWriteArraySet<ODBEventListening>( );
 }
