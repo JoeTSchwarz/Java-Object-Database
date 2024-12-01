@@ -63,7 +63,12 @@
 .combo-box-base:disabled {
     -fx-opacity: .4;
 }
-/*
+.check-box > .box {
+    -fx-padding: 3px;
+}
+.check-box > .box > .mark {
+    -fx-padding: 3px;
+}/*
 .text-field {
   -fx-min-width: 250;
 }
