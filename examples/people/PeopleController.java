@@ -24,7 +24,7 @@ public class PeopleController {
     bc.addActionListener(e -> {
       if (login == null) {
         login = JOptions.login(frame, "Login");
-        if (login[0].length() == 0 || login[1].length() == 0) return;
+        if (login == null || login[0].length() == 0 || login[1].length() == 0) return;
         try {
           int p = args[0].indexOf(":");
           String host = args[0].substring(0,p);
@@ -69,8 +69,8 @@ public class PeopleController {
         String[] inp = JOptions.multipleInputs(frame, 
                                     "Age (int)!Address!Profession!Income (double)!Image URL".split("!"),
                                     "Add "+name);
-        if (inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 || inp[3].length() == 0 ||
-            inp[4].length() == 0 || !imgExisted(inp[4])) return;
+        if (inp == null || inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 ||
+            inp[3].length() == 0 ||inp[4].length() == 0 || !imgExisted(inp[4])) return;
         bCon.add(dbName, name, new People(name, Integer.parseInt(inp[0]),
                                       inp[1], inp[2], Double.parseDouble(inp[3]), inp[4]));
         jta.append("People "+name+" is added to "+dbName+".\n");
@@ -138,8 +138,8 @@ public class PeopleController {
             inp = JOptions.multipleInputs(frame, 
                                           "Age (int)!Address!Profession!Income (double)!Image URL".split("!"),
                                            inp, "Update "+name);
-            if (inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 || inp[3].length() == 0 ||
-                inp[4].length() == 0 || !imgExisted(inp[4])) return;
+            if (inp == null || inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 ||
+                inp[3].length() == 0 ||inp[4].length() == 0 || !imgExisted(inp[4])) return;
             long beg = System.currentTimeMillis();
             bCon.update(dbName, name, new People(name, Integer.parseInt(inp[0]),
                                                  inp[1], inp[2], Double.parseDouble(inp[3]), inp[4]));
@@ -219,8 +219,8 @@ public class PeopleController {
           inp = JOptions.multipleInputs(frame, 
                                        "Age (int)!Address!Profession!Income (double)!Image URL".split("!"),
                                        inp, "TransAction "+name);
-          if (inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 || inp[3].length() == 0 ||
-              inp[4].length() == 0 || !imgExisted(inp[4])) return;
+          if (inp == null || inp[0].length() == 0 || inp[1].length() == 0 || inp[2].length() == 0 ||
+              inp[3].length() == 0 || inp[4].length() == 0 || !imgExisted(inp[4])) return;
           upd = true;
           long beg = System.currentTimeMillis();
           people = new People(name, Integer.parseInt(inp[0]), inp[1], inp[2], Double.parseDouble(inp[3]), inp[4]);
@@ -305,7 +305,7 @@ public class PeopleController {
       //ArrayList<Object> selectAll(String dbName, String comp, double cVal)
       String vN = JOptions.input(frame, "Field/VariableName");
       if (vN.length() == 0) return;
-      String cp = JOptions.input(frame, "Comparator (LT, LE, EQ, GE, GT)");
+      String cp = JOptions.input(frame, "Comparator (LT, LE, EQ, NE, GE, GT)");
       if (cp.length() == 0) return;
       String cV = JOptions.input(frame, "ComparingValue (if double: 1.0 for 1)");
       if (cV.length() == 0) return;
