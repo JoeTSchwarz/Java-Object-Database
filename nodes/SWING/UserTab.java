@@ -152,11 +152,8 @@ public class UserTab {
       but.setText("OK");
       tID.requestFocus();
       tID.setEditable(true);
-      tPW.setEditable(true);
       enable("change", false);
-      lab.setText("New Password");
       but.setForeground(Color.red);
-      ((JLabel) map.get("lpw")).setForeground(Color.red);
       ((JLabel) map.get("luid")).setForeground(Color.red);
       report.append("Fill the Fields with RED label then \n"+
                      "Click OK afer completing the required inputs\n"+
@@ -166,16 +163,21 @@ public class UserTab {
     }
     uID = tID.getText();
     if (uID != null && uID.trim().length() >= 3) {
-      report.setText("");;
-      uPW = new String(tPW.getPassword()); 
-      String oPW = JOptions.password(frame, "Old UserPassword");
-      if (uPW == null || uPW.trim().length() < 4 || oPW == null || oPW.trim().length() < 4) {
-        report.append("Invalid Inputs. No change.\n");
-      } else if (uList.isValid(uPW, uID) && uList.isValid(oPW)) {
-        if (uList.changePassword(uID, oPW, uPW)) {
-          report.append("Password of user "+uID+" is changed.\n");
-        } else error("Unable to change User "+uID+" password\n");
-      } else report.append("Password contains invalid charater : or + or @\n");
+      report.setText("");
+      // pw[0]: oldPW, pw[1]: newPW, pw[2]: confirmed PW
+      String pw[] = JOptions.changePW(frame);
+      if (pw != null) {
+        if (pw[0].trim().length() < 4 || pw[1].trim().length() < 4 ||
+            pw[2].trim().length() < 4 || !pw[2].equals(pw[1])) {
+          report.append("Invalid or mismatched PWs\n");
+          return;
+        }
+        if (uList.isValid(pw[1], uID) && uList.isValid(pw[0])) {
+          if (uList.changePassword(uID, pw[0], pw[1])) {
+            report.append("Password of user "+uID+" is updated.\n");
+          } else report.append("Unable to upgrade User "+uID+"\n");
+        } else report.append("Password contains invalid charater : or + or @\n");
+      }
     }
     but.setText("CHANGE PW");
     but.setForeground(Color.black);
