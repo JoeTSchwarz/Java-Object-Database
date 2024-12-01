@@ -27,7 +27,7 @@ public class JOptions {
   @return String array of inputs (incl. empty strings)
   */
   public static String[] multipleInputs(JFrame frame, String[] lab, String tit) {
-    return multipleInputs(frame, lab, new Object[lab.length], tit);
+    return multipleInputs(frame, lab, null, tit);
   }
   /**
   multipleInputs with Labels and defaults. The number of input fields is equal the number of the given lab array.
@@ -51,6 +51,7 @@ public class JOptions {
     String[] inp = new String[lab.length];
     JComponent jCom[] = new JComponent[lab.length];
     JDialog dia = (new JOptionPane(all)).createDialog(frame, tit);
+    dia.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
     //
     int idx = -1;
     setMenu(dia);
@@ -59,22 +60,30 @@ public class JOptions {
       layout.setConstraints(jlab, left);
       all.add(jlab);
       //
-      if (obj[i] instanceof String[]) {
-        jCom[i] = new JComboBox<String>((String[])obj[i]);
-      } else { // String or null
+      if (obj == null) {
         jCom[i] = new JTextField(24);
-        if (obj[i] != null) ((JTextField)jCom[i]).setText((String)obj[i]);
         jCom[i].addMouseListener(new CopyCutPaste((JTextField)jCom[i]));
         if (idx < 0) idx = i;
+      } else {
+        if (obj[i] instanceof String[]) {
+          jCom[i] = new JComboBox<String>((String[])obj[i]);
+        } else { // String or null
+          jCom[i] = new JTextField(24);
+          if (obj[i] != null) ((JTextField)jCom[i]).setText((String)obj[i]);
+          jCom[i].addMouseListener(new CopyCutPaste((JTextField)jCom[i]));
+          if (idx < 0) idx = i;
+        }
       }
       layout.setConstraints(jCom[i], right);
       all.add(jCom[i]);
     }
     if (idx >= 0) dia.addComponentListener(listener(jCom[idx]));
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     dia.pack();
     dia.setVisible(true);
-    for (int i = 0; i < inp.length; ++i) {
-      if (obj[i] instanceof String[]) 
+    if (!cs.closed) for (int i = 0; i < inp.length; ++i) {
+      if (obj != null && obj[i] instanceof String[]) 
         inp[i] = (String)((JComboBox<String>)jCom[i]).getSelectedItem();
       else inp[i] = ((JTextField)jCom[i]).getText().trim(); // String or 0 length
     }
@@ -132,16 +141,144 @@ public class JOptions {
       pan.validate();
       dia.pack();
     });
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     dia.pack();
     dia.setVisible(true);
     // Load list
     list.clear();
-    Component com[] = pan.getComponents();
-    for (Component C:com) {
-      String S = ((JTextField)C).getText().trim();
-      if (S.length() > 0) list.add(S);
+    if (!cs.closed) {
+      Component com[] = pan.getComponents();
+      for (Component C:com) {
+        String S = ((JTextField)C).getText().trim();
+        if (S.length() > 0) list.add(S);
+      }
     }
+    dia.dispose();
     return list;
+  }
+  /**
+  changePW 
+  @param frame JFrame, null to display JOptions in the center of screen
+  @return string array: old_PW, new_PW, confirmed_PW.
+  */
+  public static String[] changePW(JFrame frame) {
+    JLabel jpw  = new JLabel("old PW  ");
+    JPasswordField pw = new JPasswordField(24);
+    pw.addMouseListener(new CopyCutPaste(pw));
+    JTextField tf  = new JTextField(24);
+      
+    JLabel jnpw = new JLabel("new PW  ");
+    JPasswordField npw = new JPasswordField(24);
+    npw.addMouseListener(new CopyCutPaste(npw));
+    JTextField ntf  = new JTextField(24);
+      
+    JLabel jcpw = new JLabel("PW again");
+    JPasswordField cpw = new JPasswordField(24);
+    cpw.addMouseListener(new CopyCutPaste(cpw));
+    JTextField ctf = new JTextField(24);
+      
+    JCheckBox cb = new JCheckBox("Show");
+    JLabel emp  = new JLabel("  ");
+    // create a panel for npw/ntf and cb in 2 rows
+    GridBagLayout layout = new GridBagLayout();
+    JPanel pan = new JPanel(layout);
+      
+    GridBagConstraints left = new GridBagConstraints();
+    left.anchor = GridBagConstraints.EAST;
+    GridBagConstraints right = new GridBagConstraints();
+    right.anchor = GridBagConstraints.WEST;
+    right.gridwidth = GridBagConstraints.REMAINDER;
+      
+    layout.setConstraints(emp, left);
+    pan.add(emp);
+    layout.setConstraints(cb, right);
+    pan.add(cb);
+      
+    layout.setConstraints(jpw, left);
+    pan.add(jpw);
+    layout.setConstraints(pw, right);
+    pan.add(pw);
+      
+    layout.setConstraints(jnpw, left);
+    pan.add(jnpw);
+    layout.setConstraints(npw, right);
+    pan.add(npw);
+      
+    layout.setConstraints(jcpw, left);
+    pan.add(jcpw);
+    layout.setConstraints(cpw, right);
+    pan.add(cpw);
+      
+    // convert JOptionPane to JDialog
+    JDialog dia = (new JOptionPane(pan)).createDialog(frame, "Change Password");
+    dia.addComponentListener(listener(pw));
+    // toggle between Show/hide
+    cb.addItemListener(e->{
+      if (cb.isSelected()) {
+        if (tf.getText().length() == 0) tf.requestFocusInWindow();
+        else ntf.requestFocusInWindow();
+        tf.setText(new String(pw.getPassword()));
+        pan.remove(pw);
+        layout.setConstraints(jpw, left);
+        pan.add(jpw);
+        layout.setConstraints(tf, right);
+        pan.add(tf);
+          
+        ntf.setText(new String(npw.getPassword()));
+        pan.remove(npw);
+        layout.setConstraints(jnpw, left);
+        pan.add(jnpw);
+        layout.setConstraints(ntf, right);
+        pan.add(ntf);
+          
+        ctf.setText(new String(cpw.getPassword()));
+        pan.remove(cpw);
+        layout.setConstraints(jcpw, left);
+        pan.add(jcpw);
+        layout.setConstraints(ctf, right);
+        pan.add(ctf);          
+      } else {
+        if (ntf.getText().length() == 0) pw.requestFocusInWindow();
+        else npw.requestFocusInWindow();
+        pw.setText(tf.getText());
+        pan.remove(tf);
+        layout.setConstraints(jpw, left);
+        pan.add(jpw);
+        layout.setConstraints(pw, right);
+        pan.add(pw);
+         
+        npw.setText(ntf.getText());
+        pan.remove(ntf);
+        layout.setConstraints(jnpw, left);
+        pan.add(jnpw);
+        layout.setConstraints(npw, right);
+        pan.add(npw);        
+          
+        cpw.setText(ctf.getText());
+        pan.remove(ctf);
+        layout.setConstraints(jcpw, left);
+        pan.add(jcpw);
+        layout.setConstraints(cpw, right);
+        pan.add(cpw);
+      }
+      pan.validate();
+    });
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
+    setMenu(dia);
+    dia.pack();
+    dia.setVisible(true);
+    if (cs.closed) return null;
+    dia.dispose();
+    if (cb.isSelected()) return new String[] { tf.getText().trim(),
+                                               ntf.getText().trim(),
+                                               ctf.getText().trim()
+                                             };
+    return new String[] { (new String(pw.getPassword()).trim()),
+                          (new String(npw.getPassword()).trim()),
+                          (new String(cpw.getPassword()).trim())
+                        };
   }
   /**
   password allows to obfuscate the input characters.
@@ -176,11 +313,47 @@ public class JOptions {
       }
       pan.validate();
     });
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     setMenu(dia);
     dia.pack();
     dia.setVisible(true);
+    if (cs.closed) return "";
+    dia.dispose();
     if (cb.isSelected()) return tf.getText().trim();
     return new String(pf.getPassword()).trim();
+  }
+  /**
+  iNummeric allows to input only numeric string
+  @param frame JFrame, null to display JOptions in the center of screen
+  @param lab String, label
+  @param size field size
+  @return string
+  */
+  public static String iNumeric(JFrame frame, String lab, int size) {
+    JTextField tf = new JTextField(size);
+    tf.addMouseListener(new CopyCutPaste(tf));
+    tf.addKeyListener(new KeyAdapter() {
+      public void keyTyped(KeyEvent e) {
+        char c = e.getKeyChar();
+        if (c < '0' || c > '9') e.consume(); 
+      }
+    });
+    JLabel lb = new JLabel(lab);
+    // create a panel for tf
+    JPanel pan = new JPanel();
+    pan.add(lb); pan.add(tf);
+    // convert JOptionPane to JDialog
+    JDialog dia = (new JOptionPane(pan)).createDialog(frame, "JOptions.iNumeric");
+    dia.addComponentListener(listener(tf));
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
+    setMenu(dia);
+    dia.pack();
+    dia.setVisible(true);
+    if (cs.closed) return "";
+    dia.dispose();
+    return tf.getText().trim();
   }
   /**
   input allows to input a string
@@ -198,9 +371,13 @@ public class JOptions {
     // convert JOptionPane to JDialog
     JDialog dia = (new JOptionPane(pan)).createDialog(frame, "JOptions.input");
     dia.addComponentListener(listener(tf));
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     setMenu(dia);
     dia.pack();
     dia.setVisible(true);
+    if (cs.closed) return "";
+    dia.dispose();
     return tf.getText().trim();
   }
   /**
@@ -208,7 +385,7 @@ public class JOptions {
   @param frame JFrame, null to display JOptions in the center of screen
   @param list List of String
   @param lab String, label
-  @return string
+  @return string, empty if canceled
   */
   public static String choice(JFrame frame, String lab, java.util.List<String> list) {
     final JComboBox<String> combo = new JComboBox<>(list.toArray(new String[list.size()]));
@@ -217,9 +394,13 @@ public class JOptions {
     // convert JOptionPane to JDialog
     JDialog dia = (new JOptionPane(pan)).createDialog(frame, "JOptions.choice");
     dia.addComponentListener(listener(combo));
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     setMenu(dia);
     dia.pack();
     dia.setVisible(true);
+    if (cs.closed) return "";
+    dia.dispose();
     return (String) combo.getSelectedItem();
   }
   /**
@@ -287,26 +468,27 @@ public class JOptions {
       }
       pan.validate();
     });
-    StringBuilder sb = new StringBuilder( );
     dia.addComponentListener(listener(uID));
-    dia.addWindowListener(new WindowAdapter() {
-      public void windowClosing(WindowEvent w) {
-        sb.append("1");
-      }
-    });
+    CloseWindow cs = new CloseWindow(dia);
+    dia.addWindowListener(cs);
     setMenu(dia);
     dia.pack();
     dia.setVisible(true);
     String[] ret = {"", ""};
-    if (sb.length() == 0) {
+    if (!cs.closed) {
       ret[0] = uID.getText().trim();
       if (cb.isSelected()) ret[1] = tf.getText().trim();
       else ret[1] = new String(pf.getPassword()).trim();
+      dia.dispose();
     }
     // return ret[0]: userID, ret[1]: password
     return ret;
   }
-  // private area---------------------------
+  /**
+  ComponentListener
+  @param jcom JComponent
+  @return ComponentListener
+  */
   public static ComponentListener listener(final JComponent jcom) {
     ComponentListener l = new ComponentListener() {
       public void componentShown(ComponentEvent e) {
@@ -320,7 +502,7 @@ public class JOptions {
     };
     return l;
   }
-  //
+  // private area---------------------------------------------------------------------------------
   private static void setMenu(JDialog dia) {
     char[] mne = { 'C', 'P' };
     String[] key = { "Copy", "Paste" };
@@ -341,6 +523,19 @@ public class JOptions {
     }
     menuBar.add(menu);
     dia.setJMenuBar(menuBar);
+  }
+  //
+  private static class CloseWindow extends WindowAdapter {
+    public CloseWindow(JDialog dia) {
+      this.dia = dia;
+    }
+    @Override
+    public void windowClosing(WindowEvent w) {
+      closed = true;
+      dia.dispose();
+    }
+    public boolean closed = false;
+    private JDialog dia;
   }
   private static class CopyCutPaste implements MouseListener {
     /**

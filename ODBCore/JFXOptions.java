@@ -1,4 +1,5 @@
 package joeapp.odb;
+//
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Alert.*;
 import javafx.application.*;
@@ -66,7 +67,46 @@ public class JFXOptions {
     ButtonType NO = new ButtonType("NO");
     dp.getButtonTypes().addAll(OK, NO);      
     Optional<ButtonType> but = dia.showAndWait();
-    return but.get() == OK;
+    try { // in case of close dialog
+      return but.get() == OK;
+    } catch (Exception ex) { }
+    return false;
+  }
+  /**
+  iNumeric
+  <br>Click OK to terminate the input process, X-CLOSE to escape.
+  @param header String
+  @param size int, Field size
+  @return input String or null if X-CLOSE
+  */
+  public String iNumeric(String header, int size) {
+    Dialog<ButtonType> dia = new Dialog<ButtonType>();
+    // Set up dialog pane
+    VBox box = new VBox();
+    box.setPadding(new Insets(5, 5, 0, 5));
+    TextField txt = new TextField( );
+    txt.setPromptText("0");
+    txt.setOnKeyTyped(e -> {
+      String s = txt.getText();
+      int l = s.length();
+      if(l == 0 || l > size || s.charAt(0) < '0' || s.charAt(0) > '9') {
+        txt.clear();
+        e.consume();
+      }
+    });
+    txt.setPrefWidth(250);
+    box.getChildren().add(txt);
+    //
+    DialogPane diaPane = addCSS(header, dia);   
+    diaPane.getButtonTypes().addAll(ButtonType.OK);
+    diaPane.setContent(box);
+    // 
+    Platform.runLater(() -> txt.requestFocus());
+    Optional<ButtonType> B = dia.showAndWait();
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) return txt.getText().trim();
+    } catch (Exception ex) { }
+    return null;
   }
   /**
   input
@@ -89,9 +129,8 @@ public class JFXOptions {
     // 
     Platform.runLater(() -> txt.requestFocus());
     Optional<ButtonType> B = dia.showAndWait();
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) return txt.getText().trim();
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) return txt.getText().trim();
     } catch (Exception ex) { }
     return null;
   }
@@ -121,9 +160,8 @@ public class JFXOptions {
     // 
     Platform.runLater(() -> combo.requestFocus());
     Optional<ButtonType> B = dia.showAndWait();
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) return combo.getValue();
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) return combo.getValue();
     } catch (Exception ex) { }
     return null;
   }
@@ -165,15 +203,90 @@ public class JFXOptions {
     Platform.runLater(() -> pw.requestFocus());
     box.getChildren().addAll(cb, pw);
     Optional<ButtonType> B = dia.showAndWait();
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) {
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) {
         if (cb.isSelected()) return txt.getText().trim();
         return pw.getText().trim();
       }
     } catch (Exception ex) { }
     return null;
   }
+  /**
+  changePW
+  @return String array contains oldPW, newPW and confirmed_PW
+  */
+  // return ret[0]: oldPW, ret[1]: newPW, ret[2]: confirmed PW
+  public String[] changePW( ) {
+    Dialog<ButtonType> dia = new Dialog<ButtonType>();
+    //
+    VBox box = new VBox(3);
+    // Insets(top, right, bottom, left)
+    box.setPadding(new Insets(5, 5, 0, 5));
+    // Set up dialog pane
+    DialogPane diaPane = addCSS("Change Password", dia);   
+    diaPane.getButtonTypes().addAll(ButtonType.OK);
+    diaPane.setContent(box);
+    // 
+    PasswordField opw = new PasswordField( );
+    TextField otxt = new TextField( );
+    otxt.setPrefWidth(250);
+    opw.setPrefWidth(250);
+    //
+    PasswordField npw = new PasswordField();
+    TextField ntxt = new TextField( );
+    ntxt.setPrefWidth(250);
+    npw.setPrefWidth(250);
+    //
+    PasswordField cpw = new PasswordField();
+    TextField ctxt = new TextField( );
+    ctxt.setPrefWidth(250);
+    cpw.setPrefWidth(250);
+    //
+    Label olab = new Label("Old password");
+    Label nlab = new Label("New password");
+    Label clab = new Label("Confirmed new password");
+    CheckBox cb = new CheckBox("Show");
+    cb.setOnAction(e -> {
+      if (cb.isSelected()) {
+        otxt.setText(opw.getText());
+        ntxt.setText(npw.getText());
+        ctxt.setText(cpw.getText());
+        box.getChildren().setAll(cb, olab, otxt, nlab, ntxt, clab, ctxt);
+        if (otxt.getText().length() == 0) otxt.requestFocus();          
+        else if (ntxt.getText().length() == 0) ntxt.requestFocus();
+        else ctxt.requestFocus();
+      } else {
+        opw.setText(otxt.getText());
+        npw.setText(ntxt.getText());
+        cpw.setText(ctxt.getText());
+        box.getChildren().setAll(cb, olab, opw, nlab, npw, clab, cpw);
+        if (opw.getText().length() == 0) opw.requestFocus();
+        else if (npw.getText().length() == 0) npw.requestFocus();
+        else cpw.requestFocus(); 
+      }
+    });
+    Platform.runLater(() -> opw.requestFocus());
+    box.getChildren().addAll(cb, olab, opw, nlab, npw, clab, cpw );
+    Optional<ButtonType> B = dia.showAndWait();
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) {
+        if (cb.isSelected()) return new String[] { otxt.getText().trim(),
+                                                   ntxt.getText().trim(),
+                                                   ctxt.getText().trim()
+                                                 };
+        return new String[] { opw.getText().trim(),
+                              npw.getText().trim(),
+                              cpw.getText().trim()
+                            };
+      }
+    } catch (Exception ex) { }
+    return null;
+  }
+  /**
+  login
+  @param header String
+  @return String array contains uID and password
+  */
   // return ret[0]: userID, ret[1]: password
   public String[] login(String header) {
     Dialog<ButtonType> dia = new Dialog<ButtonType>();
@@ -194,33 +307,36 @@ public class JFXOptions {
     txt.setPrefWidth(250);
     pw.setPrefWidth(250);
     //
+    Label ulab = new Label("ID");
+    Label plab = new Label("Password");
     CheckBox cb = new CheckBox("Show");
     cb.setOnAction(e -> {
       if (cb.isSelected()) {
-        box.getChildren().remove(pw);
-        box.getChildren().add(txt);
         txt.setText(pw.getText());
-        txt.requestFocus();
+        box.getChildren().setAll(cb, ulab, id, plab, txt);
+        if (id.getText().length() > 0) txt.requestFocus();
+        else id.requestFocus();
       } else {
-        box.getChildren().remove(txt);
-        box.getChildren().add(pw);
         pw.setText(txt.getText());
-        pw.requestFocus();
+        box.getChildren().setAll(cb, ulab, id, plab, pw);
+        if (id.getText().length() > 0) pw.requestFocus();
+        else id.requestFocus();
       }
     });
     Platform.runLater(() -> id.requestFocus());
-    box.getChildren().addAll(id, cb, pw);
+    box.getChildren().addAll(cb, ulab, id, plab, pw);
     Optional<ButtonType> B = dia.showAndWait();
-    String[] ret = { "", "" };
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) {
-        ret[0] = id.getText().trim();
-        if (cb.isSelected()) ret[1] = txt.getText().trim();
-        else ret[1] = pw.getText().trim();
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) {
+        if (cb.isSelected()) return new String[] { id.getText().trim(),
+                                                   txt.getText().trim()
+                                                 };
+        return new String[] { id.getText().trim(),
+                              pw.getText().trim()
+                            };
       }
     } catch (Exception ex) { }
-    return ret;
+    return null;
   }
   /**
   multipleInputs with Labels. The number of input fields is equal the number of the given lab array
@@ -230,7 +346,7 @@ public class JFXOptions {
   @return Array of input Strings, null if closed
   */
   public String[] multipleInputs(String[] lab, String header) {
-    return multipleInputs(lab, new Object[lab.length], header);
+    return multipleInputs(lab, null, header);
   }
   /**
   multipleInputs with Labels and Defaults. The number of input fields is equal the number of the given lab array
@@ -258,29 +374,39 @@ public class JFXOptions {
       Label label = new Label(lab[i]);
       grid.add(label, 0, i);
       grid.setHalignment(label, HPos.RIGHT);
-      if (obj[i] instanceof String[]) {
-        String[] sa = (String[])obj[i];
-        ComboBox<String> combo = new ComboBox<>( );
-        combo.getItems().addAll(Arrays.asList(sa));
-        grid.setHalignment(combo, HPos.LEFT);
-        combo.setValue(sa[0]);
-        grid.add(combo, 1, i);
-      } else { // String or null
+      if (obj == null) {
         TextField txt = new TextField( );
         txt.setPrefWidth(250);
-        if (obj[i] != null) txt.setText((String)obj[i]);
         grid.setHalignment(txt, HPos.LEFT);
         grid.add(txt, 1, i);
         if (!focus) {
           Platform.runLater(() -> txt.requestFocus());
           focus = true;
         }
+      } else {
+        if (obj[i] instanceof String[]) {
+          String[] sa = (String[])obj[i];
+          ComboBox<String> combo = new ComboBox<>( );
+          combo.getItems().addAll(Arrays.asList(sa));
+          grid.setHalignment(combo, HPos.LEFT);
+          combo.setValue(sa[0]);
+          grid.add(combo, 1, i);
+        } else { // String or null
+          TextField txt = new TextField( );
+          txt.setPrefWidth(250);
+          if (obj[i] != null) txt.setText((String)obj[i]);
+          grid.setHalignment(txt, HPos.LEFT);
+          grid.add(txt, 1, i);
+          if (!focus) {
+            Platform.runLater(() -> txt.requestFocus());
+            focus = true;
+          }
+        }
       }
     }
     Optional<ButtonType> B = dia.showAndWait();
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) {
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) {
         ObservableList<Node> nodes = grid.getChildren();
         List<String> list = new ArrayList<>( );
         for (Node n:nodes) {
@@ -330,9 +456,8 @@ public class JFXOptions {
     box.getChildren().add(txt);
     Platform.runLater(() -> txt.requestFocus());
     Optional<ButtonType> B = dia.showAndWait();
-    try {
-      ButtonType but = B.get();
-      if (but == ButtonType.OK) {
+    try { // in case of close dialog
+      if (B.get() == ButtonType.OK) {
         ObservableList<Node> nodes = box.getChildren();
         List<String> list = new ArrayList<String>();
         for (Node n : nodes) {
@@ -362,7 +487,9 @@ public class JFXOptions {
     addCSS("CONFIRM", alert);
     alert.setContentText(msg);
     Optional<ButtonType> result = alert.showAndWait();
-    if (result.get() == ButtonType.OK) return true;
+    try {
+      if (result.get() == ButtonType.OK) return true;
+    } catch (Exception ex) { }
     return false;
   }
   /**
