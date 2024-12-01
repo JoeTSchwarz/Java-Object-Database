@@ -53,7 +53,7 @@ public class UserTab implements Initializable {
       if (uPW == null|| uPW.trim().length() < 4) {
         report.appendText("Invalid UserPW. NO add.\n");
       } else if (uList.isValid(uPW, uID) && !uList.isExisted(uID)) {
-        int pri = Integer.parseInt( priv.getText()); 
+        int pri = Integer.parseInt(priv.getText()); 
         if (uList.addUser(uPW, uID, pri)) {
           report.appendText("User "+uID+" is added.\n");
         } else report.appendText("Unable to add User "+uID+"\n");
@@ -73,30 +73,31 @@ public class UserTab implements Initializable {
       Change.setText("OK");
       JFXController.jfx.focus(userID);
       userID.setEditable(true);
-      userPW.setEditable(true);
-      labPW.setText("New Password");
-      //
       labID.setTextFill(Color.RED);
-      labPW.setTextFill(Color.RED);
       Change.setStyle("-fx-text-fill: red;");
       report.setText("Fill the Fields with RED label then \n"+
                      "Click OK afer completing the required inputs\n"+
                      "No semicolon (:) or at (@) in PW\n"+
-                     "To CANCEL OK with empty userID field\n");
+                     "To CANCEL OK with empty userID field or cancel POPUP dialog\n");
       return;
     }
     String uID = userID.getText();
     if (uID != null && uID.trim().length() >= 3) {
       report.clear();
-      String uPW = userPW.getText(); 
-      String oPW = JFXController.jfx.password("Old Password");
-      if (uPW == null || uPW.trim().length() < 4 || oPW == null || oPW.trim().length() < 4) {
-        report.appendText("Invalid Inputs\n");
-      } else if (uList.isValid(uPW, uID) && uList.isValid(oPW)) {
-        if (uList.changePassword(uID, oPW, uPW)) {
-          report.appendText("Password of user "+uID+" is updated.\n");
-        } else report.appendText("Unable to upgrade User "+uID+"\n");
-      } else report.appendText("Password contains invalid charater : or + or @\n");
+      // pw[0]: oldPW, pw[1]: newPW, pw[2]: confirmed PW
+      String pw[] = JFXController.jfx.changePW( );
+      if (pw != null) {
+        if (pw[0].trim().length() < 4 || pw[1].trim().length() < 4 ||
+            pw[2].trim().length() < 4 || !pw[2].equals(pw[1])) {
+          report.appendText("Invalid or mismatched PWs\n");
+          return;
+        }
+        if (uList.isValid(pw[1], uID) && uList.isValid(pw[0])) {
+          if (uList.changePassword(uID, pw[0], pw[1])) {
+            report.appendText("Password of user "+uID+" is updated.\n");
+          } else report.appendText("Unable to upgrade User "+uID+"\n");
+        } else report.appendText("Password contains invalid charater : or + or @\n");
+      }
     }
     Change.setText("CHANGE PW");
     Change.setStyle("-fx-text-fill: blue;");
@@ -245,9 +246,9 @@ public class UserTab implements Initializable {
     //
     priv.setPromptText("0");
     priv.setOnKeyTyped(e -> {
-      String c = priv.getText();
-      int l = priv.getText().length();
-      if(l == 0 || l > 1 || c.charAt(0) < '0' || c.charAt(0) > '3') {
+      String s = priv.getText();
+      int l = s.length();
+      if(l == 0 || l > 1 || s.charAt(0) < '0' || s.charAt(0) > '3') {
         priv.clear();
         e.consume();
       }

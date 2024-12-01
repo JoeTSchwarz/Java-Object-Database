@@ -34,12 +34,12 @@ public class JFXController implements Initializable {
     }
     // return ret[0]: userID, ret[1]: password
     String[] aut = jfx.login("Superuser Authentication");
-    suID = aut[0]; suPW = aut[1];
-    if (suID.length() == 0 || suPW.length() == 0) {
+    if (aut == null || aut[0].length() == 0 || aut[1].length() == 0) {
       model.select(0);
       return;
     }
-    if (!uList.isSuperuser(suPW, suID)) {
+    suID = aut[0]; suPW = aut[1];
+     if (!uList.isSuperuser(suPW, suID)) {
       jfx.warning("You must be Superuser to open this Tab");
       model.select(0);
       return;
