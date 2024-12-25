@@ -19,7 +19,6 @@ class ODMS {
   */
   protected ODMS(String dbName) {
     this.dbName = dbName;
-    this.csName = csName;
     cache = new ConcurrentHashMap<String, byte[]>();
     oCache = new ConcurrentHashMap<String, List<byte[]>>();    
   }
