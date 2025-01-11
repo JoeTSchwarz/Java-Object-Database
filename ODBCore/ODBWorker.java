@@ -92,8 +92,7 @@ public class ODBWorker implements Runnable {
           } catch (Exception ex) { }
           odMgr.uIDList.remove(uID);
           odMgr.workers.remove(this);
-          if (uID.charAt(0) != '+')
-            parms.logging(uid+" disconnected.");
+          if (uID.charAt(0) != '+') parms.logging(uid+" disconnected.");
           exit();
           return;
         case 3: // getKeys(dbName)
@@ -295,7 +294,8 @@ public class ODBWorker implements Runnable {
           ios.writeBool(odMgr.isKeyFree(uID, dbName, ois.readToken( )));
           break;
         case 29: // add(dbName, key, obj, node)
-          String[] keys = ois.readToken( ).split("+");
+          //String[] keys = ois.readToken( ).split("+");
+          String[] keys = ODBParser.split(ois.readToken(), "+");
           if (odMgr.isExisted(uID, dbName, keys[0])) {
             ios.writeErr(keys[0]+" exists.");
             break;
@@ -349,7 +349,7 @@ public class ODBWorker implements Runnable {
           String pat = charset != null? new String(ois.readBytes(), charset):new String(ois.readBytes());
           kLst = odMgr.getKeys(uID, dbName);
           for (String k : kLst) {
-            byte[] obj = odMgr.read(uID, dbName, k);odMgr.read(uID, dbName, k);
+            byte[] obj = odMgr.read(uID, dbName, k);
             if (oov.viewVar(obj, key, "EQ", pat)) sLst.add(obj);             
           }
           ios.writeObjList(sLst);
@@ -364,8 +364,9 @@ public class ODBWorker implements Runnable {
           */
           kLst = odMgr.getKeys(uID, dbName);
           String sql = ois.readToken();
+          String tmp[] = ODBParser.split(sql, " "); // faster
           ArrayList<byte[]> qLst = new ArrayList<>();
-          String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
+          //String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
           try {
             for (String k : kLst) {
               byte[] bb = odMgr.read(uID, dbName, k);
@@ -391,8 +392,8 @@ public class ODBWorker implements Runnable {
           kLst = odMgr.getKeys(uID, dbName);
           ArrayList<byte[]> aLst = new ArrayList<>();
           String sa = charset != null? new String(ois.readBytes(), charset):new String(ois.readBytes());
-          String[] val = sa.split(""+(char)0x00);
-          //
+          //String[] val = sa.split(""+(char)0x00);
+          String[] val = ODBParser.split(sa, ""+(char)0x00);
           for (String k : kLst) {
             byte[] ba = odMgr.read(uID, dbName, k);
             if (oov.viewVar(ba, key, val[0], val[1])) aLst.add(ba);

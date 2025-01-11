@@ -44,7 +44,7 @@ public class ODBInputStream extends InputStream {
   */
   public int readShort( ) {
     if ((pos+2) >= buf.length) return -1;
-    return ((buf[pos++]&0xFF) << 8)|(buf[pos++]&0xFF);
+    return (((int)buf[pos++]&0xFF) << 8)|((int)buf[pos++]&0xFF);
   }
   /**
   readInt - read 4 continuous bytes and convert to an int
@@ -52,8 +52,8 @@ public class ODBInputStream extends InputStream {
   */
   public int readInt( ) {
     if ((pos+4) >= buf.length) return -1;
-    return ((buf[pos++]&0xFF) << 24)|((buf[pos++]&0xFF) << 16)|
-           ((buf[pos++]&0xFF) << 8)|(buf[pos++]&0xFF);
+    return (((int)buf[pos++]&0xFF) << 24)|(((int)buf[pos++]&0xFF) << 16)|
+           (((int)buf[pos++]&0xFF) << 8)|((int)buf[pos++]&0xFF);
   }
   /**
   readString - read le continuous bytes and convert to a String
@@ -73,7 +73,7 @@ public class ODBInputStream extends InputStream {
   @exception Exception thrown by JAVA
   */
   public String readToken( ) throws Exception {
-    int le =((buf[pos++]&0xFF)<<8)|buf[pos++]&0xFF;
+    int le =(((int)buf[pos++]&0xFF)<<8)|buf[pos++]&0xFF;
     String s = new String(buf, pos, le, csName);
     pos += le;
     return s;

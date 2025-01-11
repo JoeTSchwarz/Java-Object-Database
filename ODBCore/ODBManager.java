@@ -15,7 +15,7 @@ Object Data Manager
 */
 public class ODBManager implements ODBEventListening {
   /**
-  contructor. ODBManager is responsible for the coomunication between ODBWorker/ODBCluster and ODMS
+  contructor. ODBManager is responsible for the coomunication between ODBWorker/ODBCluster and NanoDB
   @param parms ODBParms, JODB Object as a generic Parameter
   */
   public ODBManager(ODBParms parms) {
@@ -30,7 +30,7 @@ public class ODBManager implements ODBEventListening {
     dbCommit = new ConcurrentHashMap<>();
     dbOwner = new ConcurrentHashMap<>();
     autoCom = new ConcurrentHashMap<>();
-    odmsLst = new ConcurrentHashMap<>();
+    nanoLst = new ConcurrentHashMap<>();
     kOwner = new ConcurrentHashMap<>();
     nodes = new ConcurrentHashMap<>();
     parms.listener.addListener(this);
@@ -97,10 +97,10 @@ public class ODBManager implements ODBEventListening {
   @exception Exception thrown by JAVA
   */
   public void connect(String uID, String dbName, String cs) throws Exception {
-    if (odmsLst.get(dbName) == null) {
-      ODMS odms = new ODMS(parms.db_path+dbName, cs);
-      odmsLst.put(dbName, odms);
-      odms.open();
+    if (nanoLst.get(dbName) == null) {
+      NanoDB nano = new NanoDB(parms.db_path+dbName, cs);
+      nanoLst.put(dbName, nano);
+      nano.open();
     }
     charsets.put(dbName, cs);
     dbCommit.put(dbName, autoCom.get(uID) != null);
@@ -201,9 +201,9 @@ public class ODBManager implements ODBEventListening {
   @return ArrayList of String, null if uID is not owner of or shared with dbName
   */
   public ArrayList<String> getLocalKeys(String uID, String dbName) {
-    ODMS odms = odmsLst.get(dbName);
-    // odms must be check for null because of non-existent on other node.
-    if (odms != null) return odms.getKeys();
+    NanoDB nano = nanoLst.get(dbName);
+    // nano must be check for null because of non-existent on other node.
+    if (nano != null) return nano.getKeys();
     return new ArrayList<>();
   }
   /**
@@ -226,14 +226,14 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public void add(String uID, String dbName, String key, byte[] obj) throws Exception {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null || odms.isExisted(key)) throw new Exception(key+"  exists. Or unknown "+dbName);
-    odms.addObject(key, obj);
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null || nano.isExisted(key)) throw new Exception(key+"  exists. Or unknown "+dbName);
+    nano.addObject(key, obj);
     if (autoCom.get(uID) == null) {  // lock key
       ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
       kMap.put(key, uID);
       kOwner.put(dbName, kMap);
-    } else odms.commit(key); //  and commit
+    } else nano.commit(key); //  and commit
   }
   /**
   update() serialized object with obj at the given key to dbName (local or remote)
@@ -246,16 +246,16 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public boolean update(String uID, String dbName, String key, byte[] obj) throws Exception {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return false;
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return false;
     if (isLocked(uID, dbName, key)) {
-      if (odms.updateObject(key, obj)) {
+      if (nano.updateObject(key, obj)) {
         if (autoCom.get(uID) != null) {  // unlock key and commit
           ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
           if (uID.equals(kMap.get(key)) || uID.charAt(0) == '*') {
             kMap.remove(key); // unlock key
             kOwner.put(dbName, kMap);
-            odms.commit(key);
+            nano.commit(key);
           }
         }
         return true;
@@ -277,16 +277,16 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public boolean delete(String uID, String dbName, String key) throws Exception {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return false;
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return false;
     if (isLocked(uID, dbName, key)) {
-      if (odms.deleteObject(key)) { 
+      if (nano.deleteObject(key)) { 
         if (autoCom.get(uID) != null) {  // unlock key and commit
           ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
           if (uID.equals(kMap.get(key)) || uID.charAt(0) == '*') {
             kMap.remove(key); // unlock key
             kOwner.put(dbName, kMap);
-            odms.commit(key);
+            nano.commit(key);
           }
         }
         return true;
@@ -309,11 +309,11 @@ public class ODBManager implements ODBEventListening {
   // owner Check is done on ODBConnect
 
   public byte[] read(String uID, String dbName, String key) throws Exception {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return null;
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return null;
     String uid = kOwner.get(dbName).get(key);
-    if (odms.isExisted(key) && (uID.equals(uid) || uid == null)) {
-      byte[] bb = odms.readObject(key);
+    if (nano.isExisted(key) && (uID.equals(uid) || uid == null)) {
+      byte[] bb = nano.readObject(key);
       if (bb != null) return bb;
     }
     if (uID.charAt(0) != '+') {
@@ -378,8 +378,8 @@ public class ODBManager implements ODBEventListening {
           removeAgent(uID);
           dbList.remove(dbName);
           dbWorker.remove(dbName);
-          ODMS odms = odmsLst.remove(dbName);
-          if (odms != null) odms.close();
+          NanoDB nano = nanoLst.remove(dbName);
+          if (nano != null) nano.close();
         }
       }
       return true;
@@ -394,11 +394,11 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public void save(String uID, String dbName) throws Exception {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return;
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return;
     boolean auto = autoCom.get(uID) != null;
     restoreKeys("*", dbName, auto);
-    odms.save();
+    nano.save();
     //
     if (uID.charAt(0) != '+') {
       dbName = "+"+uID+"|"+dbName;
@@ -418,9 +418,9 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public boolean isExisted(String uID, String dbName, String key) {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return false;
-    if (odms.isExisted(key)) return true;
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return false;
+    if (nano.isExisted(key)) return true;
     if (uID.charAt(0) != '+') {
       dbName = "+"+uID+"|"+dbName;
       for (ODBCluster odbc : cluster) if (odbc.isExisted(dbName, key)) return true;
@@ -435,9 +435,9 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public String lockedBy(String dbName, String key) {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return null;
-    if (odms.isExisted(key)) {
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return null;
+    if (nano.isExisted(key)) {
       return kOwner.get(dbName).get(key);
     }
     for (ODBCluster odbc : cluster) {
@@ -455,9 +455,9 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public boolean isKeyFree(String uID, String dbName, String key) {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return false;
-    if (odms.isExisted(key)) {
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return false;
+    if (nano.isExisted(key)) {
       String uid = kOwner.get(dbName).get(key);
       if (uID.equals(uid) || uid == null) return true;
       return false;
@@ -494,9 +494,9 @@ public class ODBManager implements ODBEventListening {
   */
   // owner Check is done on ODBConnect
   public boolean lock(String uID, String dbName, String key) {
-    ODMS odms = odmsLst.get(dbName);
-    if (odms == null) return false;
-    if (odms.isExisted(key)) {
+    NanoDB nano = nanoLst.get(dbName);
+    if (nano == null) return false;
+    if (nano.isExisted(key)) {
       ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
       String uid = kMap.get(key); // is already locked ?
       if (uid != null) return uID.equals(uid);
@@ -568,13 +568,13 @@ public class ODBManager implements ODBEventListening {
   public boolean restoreKey(String uID, String dbName, String key, boolean mode) {
     ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
     if (kMap.size() > 0) {
-      ODMS odms = odmsLst.get(dbName);
-      if (odms == null) return false;
-      if (uID.equals(kMap.get(key)) || uID.indexOf("*") >= 0 || odms.isKeyDeleted(key)) {
+      NanoDB nano = nanoLst.get(dbName);
+      if (nano == null) return false;
+      if (uID.equals(kMap.get(key)) || uID.indexOf("*") >= 0 || nano.isKeyDeleted(key)) {
         kMap.remove(key); // unlock key
         kOwner.put(dbName, kMap);
-        if (mode) odms.commit(key);
-        else odms.rollback(key);
+        if (mode) nano.commit(key);
+        else nano.rollback(key);
         return true;
       }
     }
@@ -595,18 +595,18 @@ public class ODBManager implements ODBEventListening {
   public boolean restoreKeys(String uID, String dbName, boolean mode) {
     ConcurrentHashMap<String, String> kMap = kOwner.get(dbName.trim());
     if (kMap.size() > 0) {
-      ODMS odms = odmsLst.get(dbName);
-      if (odms == null) return false;
+      NanoDB nano = nanoLst.get(dbName);
+      if (nano == null) return false;
       ArrayList<String> lst = new ArrayList<>();
       List<String> kLst = new ArrayList<String>(kMap.keySet());
       for (String key : kLst) 
-      if (uID.equals(kMap.get(key)) || "*".equals(uID) || odms.isKeyDeleted(key)) {
+      if (uID.equals(kMap.get(key)) || "*".equals(uID) || nano.isKeyDeleted(key)) {
         if (kMap.remove(key) != null) lst.add(key); // unlock key
       }
       if (lst.size() > 0) {
         kOwner.put(dbName, kMap);
-        if (mode) odms.commit(lst);
-        else odms.rollback(lst);
+        if (mode) nano.commit(lst);
+        else nano.rollback(lst);
         return true;
       }
     }
@@ -770,8 +770,8 @@ public class ODBManager implements ODBEventListening {
     list.remove(uID);
     dbWorker.put(dbName, list);
     if (list.size() > 0) return;
-    ODMS odms = odmsLst.remove(dbName);
-    if (odms != null) odms.close();
+    NanoDB nano = nanoLst.remove(dbName);
+    if (nano != null) nano.close();
     dbWorker.remove(dbName);
     dbList.remove(dbName);
   }
@@ -783,7 +783,7 @@ public class ODBManager implements ODBEventListening {
   private ODBParms parms;
   private List<String> dbList;
   private List<ODBCluster> cluster;
-  private ConcurrentHashMap<String, ODMS> odmsLst;
+  private ConcurrentHashMap<String, NanoDB> nanoLst;
   private ConcurrentHashMap<String, String> charsets;
   private ConcurrentHashMap<String, ODBCluster> nodes;
   private ConcurrentHashMap<String, Boolean> autoCom, dbCommit;

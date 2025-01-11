@@ -90,23 +90,7 @@ public class ODBIOStream {
   public void writeKey(Object key) throws Exception {
     writeToken(odbKey(key));
   }
-  /**
-  convert to ODBKey
-  @param key Object key either String or long or BigInteger
-  @return String in ODB format
-  @exception Exception if key is not the mentioned type of String or long or BigInteger
-  */
-  public static String odbKey(Object key) throws Exception {
-    if (key instanceof String) { // key Tag: 0x00 for String as key
-      if (((String)key).charAt(0) > (char)0x02) return (char)0x00+((String)key);
-      return (String)key;
-    }
-    // key Tag: 0x01 for long/Long as key
-    if (key.getClass().getName().equals("Long")) return (char)0x01+""+(long)key;
-    // key Tag: 0x02 for BigInteger as key
-    if (key.getClass().getName().equals("BigInteger")) return (char)0x02+((BigInteger)key).toString();
-    throw new Exception("Invalid key:"+key);
-  }
+
   /**
   write
   @param bb byte array
@@ -409,19 +393,19 @@ public class ODBIOStream {
   public void getSoc(SocketChannel soc) throws Exception {
     read(soc);
     // check ODBWorker Exception
-    int l = ((buf[7]&0xFF) << 8)|(buf[8]&0xFF);
-    if (l > 0) throw new IOException(new String(buf,17+(((buf[5]&0xFF)<<8)|(buf[6]&0xFF)), l));
+    int l = (((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF);
+    if (l > 0) throw new IOException(new String(buf,17+((((int)buf[5]&0xFF)<<8)|((int)buf[6]&0xFF)), l));
   }
   /**
   readObj
   @return byte array of serialized object or null
   */
   public byte[] readObj() {
-    int len = ((buf[13]&0xFF) << 24)|((buf[14]&0xFF) << 16)|
-              ((buf[15]&0xFF) << 8)|(buf[16]&0xFF);
+    int len = (((int)buf[13]&0xFF) << 24)|(((int)buf[14]&0xFF) << 16)|
+              (((int)buf[15]&0xFF) << 8)|((int)buf[16]&0xFF);
     if (len == 0) return null;
-    int p = 17+(((buf[5]&0xFF) << 8)|(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF))+
-               (((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|((buf[11]&0xFF) << 8)|(buf[12]&0xFF));
+    int p = 17+((((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF))+((((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF))+
+               ((((int)buf[9]&0xFF) << 24)|(((int)buf[10]&0xFF) << 16)|(((int)buf[11]&0xFF) << 8)|((int)buf[12]&0xFF));
     byte[] bb = new byte[len];
     System.arraycopy(buf, p, bb, 0, len);
     return bb;    
@@ -432,8 +416,10 @@ public class ODBIOStream {
   @exception IOException thrown by JAVA
   */
   public Object readPrimitive() throws IOException {
-    int p = 17+(((buf[5]&0xFF) << 8)|(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF))+
-               (((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|((buf[11]&0xFF) << 8)|(buf[12]&0xFF));
+    int p = 17+
+            ((((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF))+
+            ((((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF))+
+            ((((int)buf[9]&0xFF) << 24)|(((int)buf[10]&0xFF) << 16)|(((int)buf[11]&0xFF) << 8)|((int)buf[12]&0xFF));
     if (buf[13] == (byte)0x00) { // String
       int le = (int)(buf[14] & 0xFF) << 16 |
                (int)(buf[15] & 0xFF) << 8 |
@@ -478,12 +464,14 @@ public class ODBIOStream {
   */
   public ArrayList<Object> readKeys() throws Exception {
     ArrayList<Object> list = new ArrayList<>(); // create a List
-    int len = ((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|
-              ((buf[11]&0xFF) << 8)|(buf[12]&0xFF);
+    int len = (((int)buf[9]&0xFF) << 24)|(((int)buf[10]&0xFF) << 16)|
+              (((int)buf[11]&0xFF) << 8)|((int)buf[12]&0xFF);
     // 17 + length of ID + length of err
-    int p = 17+(((buf[5]&0xFF) << 8)|+(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF));
+    int p = 17+
+            ((((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF))+
+            ((((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF));
     for (int sum = 0, le = 0; sum < len; sum += (3+le)) {
-      le = ((buf[p]&0xFF) << 8)+(buf[p+1]&0xFF)-1; // length
+      le = (((int)buf[p]&0xFF) << 8)|((int)buf[p+1]&0xFF)-1; // length
       p += 2; // position of Key-Tag
       // String as key
       if (buf[p] == (byte)0x00) {
@@ -510,12 +498,14 @@ public class ODBIOStream {
   */
   public ArrayList<Object> readObjList() throws Exception {
     ArrayList<Object> list = new ArrayList<>(); // create a List
-    int len = (((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|
-              ((buf[11]&0xFF) << 8)|(buf[12]&0xFF));
+    int len = ((((int)buf[9]&0xFF) << 24)|(((int)buf[10]&0xFF) << 16)|
+              (((int)buf[11]&0xFF) << 8)|((int)buf[12]&0xFF));
     // 17 + length of ID + length of err
-    int p = 17+(((buf[5]&0xFF) << 8)|(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF));
+    int p = 17+
+            ((((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF))+
+            ((((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF));
     for (int i, l, sum = 0, le; sum < len; sum += (2+le)) {
-      le = ((buf[p]&0xFF) << 8)+(buf[p+1]&0xFF); // length
+      le = (((int)buf[p]&0xFF) << 8)|((int)buf[p+1]&0xFF); // length
       ObjectInputStream ois = new ObjectInputStream(new ODBInputStream(buf, p+2, le));
       list.add(ois.readObject());
       ois.close();
@@ -530,12 +520,14 @@ public class ODBIOStream {
   */
   public ArrayList<String> readList() throws Exception {
     ArrayList<String> list = new ArrayList<>(); // create a List
-    int len = (((buf[9]&0xFF) << 24)|((buf[10]&0xFF) << 16)|
-              ((buf[11]&0xFF) << 8)|(buf[12]&0xFF));
+    int len = ((((int)buf[9]&0xFF) << 24)|(((int)buf[10]&0xFF) << 16)|
+              (((int)buf[11]&0xFF) << 8)|((int)buf[12]&0xFF));
     // 17 + length of ID + length of err
-    int p = 17+(((buf[5]&0xFF) << 8)|(buf[6]&0xFF))+(((buf[7]&0xFF) << 8)|(buf[8]&0xFF));
+    int p = 17+
+            ((((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF))+
+            ((((int)buf[7]&0xFF) << 8)|((int)buf[8]&0xFF));
     for (int sum = 0, le; sum < len; sum += (2+le)) {
-      le = ((buf[p]&0xFF) << 8)+(buf[p+1]&0xFF);
+      le = (((int)buf[p]&0xFF) << 8)|((int)buf[p+1]&0xFF);
       list.add(new String(buf, p+2, le, csName));
       p += (2+le);
     }
@@ -547,7 +539,7 @@ public class ODBIOStream {
   @exception Exception thrown by JAVA
   */
   public String readMsg() throws Exception {
-    int len = ((buf[5]&0xFF) << 8)|(buf[6]&0xFF);
+    int len = (((int)buf[5]&0xFF) << 8)|((int)buf[6]&0xFF);
     if (len == 0) return null;
     return new String(buf, 17, len, csName);
   }
@@ -556,8 +548,8 @@ public class ODBIOStream {
   @return integer
   */
   public int readInteger( ) {
-    return ((buf[1]&0xFF) << 24)|((buf[2]&0xFF) << 16)|
-           ((buf[3]&0xFF) << 8)|(buf[4]&0xFF);
+    return (((int)buf[1]&0xFF) << 24)|(((int)buf[2]&0xFF) << 16)|
+           (((int)buf[3]&0xFF) << 8)|((int)buf[4]&0xFF);
   }
   /**
   readBool
@@ -596,6 +588,24 @@ public class ODBIOStream {
     for (int i = 0; i < 24; ++i) buf[i] = (byte)0x00;
     pos = 17;
   }
+  //static -------------------------------------------------------------------------------------------
+  /**
+  convert to ODBKey
+  @param key Object key either String or long or BigInteger
+  @return String in ODB format
+  @exception Exception if key is not the mentioned type of String or long or BigInteger
+  */
+  public static String odbKey(Object key) throws Exception {
+    if (key instanceof String) { // key Tag: 0x00 for String as key
+      if (((String)key).charAt(0) > (char)0x02) return (char)0x00+((String)key);
+      return (String)key;
+    }
+    // key Tag: 0x01 for long/Long as key
+    if (key instanceof Long) return (char)0x01+""+(long)key;
+    // key Tag: 0x02 for BigInteger as key
+    if (key instanceof java.math.BigInteger) return (char)0x02+((BigInteger)key).toString();
+    throw new Exception("Invalid key:"+key);
+  }
   //-------------------------- private area---------------------
   private void enlarge(int le) {
     MAX += (le+1024);
@@ -604,6 +614,6 @@ public class ODBIOStream {
     buf = tmp;
   }
   private byte[] buf;
-  private int MAX=65536, pos=0;
+  private int MAX=131072, pos=0;
   private String csName = "UTF-8";
 }

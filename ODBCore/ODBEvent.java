@@ -40,7 +40,7 @@ public class ODBEvent {
       nodes = null;
       node = null;
     } else {
-      nodes = (new String(buf, 1, packet.getLength()-1)).split(""+(char)0x01);
+      nodes = ODBParser.split((new String(buf, 1, packet.getLength()-1)), ""+(char)0x01);
       message = nodes[1];
       node = nodes[0];
     }
@@ -82,7 +82,7 @@ public class ODBEvent {
   */
   public ODBConnect onEvent(String pw, String uid, List<String> dbList) {
     for (int i = 1; i < nodes.length; ++i) if (!nodes[i].equals(node)) try {
-      String[] ip =  nodes[i].split(":");
+      String[] ip =  ODBParser.split(nodes[i], ":");
       ODBConnect odbc = new ODBConnect(ip[0], Integer.parseInt(ip[1]), pw, uid);
       // connect to the alternative node. Ignore *
       for (String dbName : dbList) try {

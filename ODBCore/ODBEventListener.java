@@ -56,7 +56,7 @@ public class ODBEventListener implements Runnable {
   public void run() {
     boolean running = false;
     try {
-      String[] ip = host_port.split(":");
+      String[] ip = ODBParser.split(host_port, ":");
       mcs = new MulticastSocket(Integer.parseInt(ip[1]));
       mcs.joinGroup(InetAddress.getByName(ip[0]));
       running = true;

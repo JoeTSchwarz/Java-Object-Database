@@ -38,7 +38,8 @@ public class ODBConnect {
       throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/ID.");
     }
     // data[0]: privilege, data[1]: userID, data[2]: MulticastIP:MulticastPort 
-    data = ios.readMsg().split("/");
+    data = ODBParser.split(ios.readMsg(), "/");
+    //data = ios.readMsg().split("/");
     priv = Integer.parseInt(data[0]);
     // start Shutdown listener
     Runtime.getRuntime().addShutdownHook(new Thread() {

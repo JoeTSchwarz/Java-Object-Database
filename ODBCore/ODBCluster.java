@@ -20,7 +20,7 @@ class ODBCluster {
   @exception Exception thrown by JAVA
   */
   protected ODBCluster(String host_port) throws Exception {
-    String[] ip =  host_port.split(":");
+    String[] ip =  ODBParser.split(host_port, ":");
     soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
     soc.socket().setReceiveBufferSize(65536); // 32KB
     soc.socket().setSendBufferSize(65536);

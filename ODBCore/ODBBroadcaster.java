@@ -62,7 +62,7 @@ public class ODBBroadcaster implements Runnable {
   public void run( ) {
     boolean running = false;
     try {
-      String[] ip = host_port.split(":");
+      String[] ip = ODBParser.split(host_port, ":");
       int port = Integer.parseInt(ip[1]);
       mcs = new MulticastSocket(port);
       InetAddress group = InetAddress.getByName(ip[0]);
@@ -72,8 +72,8 @@ public class ODBBroadcaster implements Runnable {
           byte[] msg = msgLst.remove(0);
           mcs.send(new DatagramPacket(msg, msg.length, group, port));
         }
-        // pause 0.1 milliSecond or 100 microSeconds
-        java.util.concurrent.TimeUnit.MICROSECONDS.sleep(100);
+        // pause 50 microsecond or 100 microSeconds
+        java.util.concurrent.TimeUnit.MICROSECONDS.sleep(50);
       }
     } catch (Exception ex) { }
     if (!running) {

@@ -41,7 +41,7 @@ public class UserList {
     } else {
       int n;
       GZIPInputStream gin = new GZIPInputStream(new FileInputStream(uFile));
-      String[] lst = (new String(gin.readAllBytes())).split("\n");
+      String[] lst = ODBParser.split((new String(gin.readAllBytes())), "\n");
       for (String s : lst) uList.add(EnDecrypt.decrypt(s));
       gin.close();
     }
@@ -216,7 +216,7 @@ public class UserList {
     try {
       int n;
       GZIPInputStream gin = new GZIPInputStream(new FileInputStream(uFile));
-      String[] lst = (new String(gin.readAllBytes())).split("\n");
+      String[] lst = ODBParser.split((new String(gin.readAllBytes())), "\n");
       for (String s : lst) {
         n = s.indexOf("@"); // remove the old admin
         String user = EnDecrypt.decrypt(s.substring(0, n));

@@ -178,8 +178,10 @@ public class ODBMining extends ODBConnect {
     */
     // 0      1     2  3     4   5     6  7     8  9     10 11    ...
     // select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
+    // split(RegEx) is slower than implemented ODBIOStream.split(String, pattern)
     public ArrayList<Object> SQL(String dbName, String sql) throws Exception {
-      String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
+      //String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
+      String tmp[] = ODBParser.split(sql, " "); // faster
       if (tmp.length < 4 || (tmp.length % 4) > 0 || !"select".equals(tmp[0]))
         throw new Exception("Invalid SQL expression:"+sql);
       for (int i = 4; i < tmp.length; i += 4) {
@@ -446,6 +448,19 @@ public class ODBMining extends ODBConnect {
       send(dbName, 38);
       return ios.readObjList(); 
     }
+  //
+  private String[] split(String str, String pat) {
+    List<String> lst = new ArrayList<String>();
+    for (int a = 0, b = 0, le = pat.length(), mx = str.length(); a < mx; a = b + le) {
+      b = str.indexOf(pat, a);
+      if (b < 0) {
+        lst.add(str.substring(a));
+        break;
+      }
+      if ((a+le) < b) lst.add(str.substring(a, b));
+    }
+    return lst.toArray(new String[lst.size()]);
+  }
     //
     private String onComparator(String comp) throws Exception {
       String com = comp.trim().toUpperCase();

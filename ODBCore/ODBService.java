@@ -116,7 +116,7 @@ public class ODBService {
   */
   public long ping(String node) {
     try {
-      String[] ip = node.split(":");
+      String[] ip = ODBParser.split(node, ":");
       if (ip.length == 2) {
         SocketChannel soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
         ByteBuffer buf = ByteBuffer.allocate(32);
@@ -265,9 +265,9 @@ public class ODBService {
       parms.logging("ODBService is down.");
       parms.logger.close();
       if (!log) (new File(logName)).delete();
+      parms.pool.shutdownNow(); // close Pool
       TimeUnit.MILLISECONDS.sleep(parms.delay);
     } catch (Exception ex) { }
-    parms.pool.shutdownNow();
   }
   //
   private ODBIOStream ios = new ODBIOStream();

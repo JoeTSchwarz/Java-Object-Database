@@ -16,6 +16,26 @@ import java.util.concurrent.*;
 */
 public class ODBParser {
   /**
+  split faster than String.split(regEx). Example: split(myString, myPattern)
+  @param str  String, String to be splitted
+  @param pat  String, pattern
+  @return String array
+  */
+  public static String[] split(String str, String pat) {
+    int le = pat.length();
+    List<String> lst = new ArrayList<String>();
+    if (le == 0) for (int a = 0, mx = str.length(); a < mx; ++a) lst.add(""+str.charAt(a));
+    else for (int a = 0, b = 0, mx = str.length(); a < mx; a = b + le) {
+      b = str.indexOf(pat, a);
+      if (b < 0) {
+        lst.add(str.substring(a));
+        break;
+      }
+      lst.add(str.substring(a, b));
+    }
+    return lst.toArray(new String[lst.size()]);
+  }
+  /**
   JODB Property parser.
   @param config String, Config file name
   @return HashMap of Properties with key = name, value = property. NULL if config is invalid
@@ -23,7 +43,7 @@ public class ODBParser {
   */
   public static HashMap<String, String> odbProperty(String config) throws Exception {
     String X = (new String(Files.readAllBytes((new File(config)).toPath()))).
-                replace("< ", "<").replace("> ", ">").replace(" />", "/>").replace("\r","");
+               replace("< ", "<").replace("> ", ">").replace(" />", "/>").replace("\r","");
     // remove all comments
     for (int e, b; ;) {
       b = X.indexOf("<!");
