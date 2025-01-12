@@ -264,7 +264,7 @@ public class NanoDB {
                                  (byte) (dl & 0xFF)
                                }
                    );
-          bao.write(key.getBytes());
+          bao.write(key.getBytes(cs));
         }
         bao.flush();
         long pt = 4+bao.size();
