@@ -65,16 +65,20 @@ public class NanoDB {
   @return byte array which can be an array of (non)serialialized object
   @exception Exception thrown by JAVA
   */
+  // check for existed key is done by ODBManager
   public byte[] readObject(String key) throws Exception {
-    if (keysList.size() == 0) throw new Exception(fName+" is empty.");
     if (cache.containsKey(key)) return cache.get(key);
-    return readKey(key);
+    byte[] buf = new byte[sizes.get(key)];
+    raf.seek(pointers.get(key));
+    raf.read(buf);
+    return buf;
   }
   /**
   addObject
   @param key String
   @param buf byte array of a (non)serialized object in byte array
   */
+  // check for existed key is done by ODBManager
   public void addObject(String key, byte[] buf) {
     oCache.put(key, new byte[] {});
     cache.put(key, buf);
@@ -86,9 +90,14 @@ public class NanoDB {
   @return boolean true if success
   */
   public boolean deleteObject(String key) {
-    if (keysList.contains(key)) try {
+    try {
       if (cache.containsKey(key)) oCache.put(key, cache.remove(key));
-      else oCache.put(key, readKey(key));
+      else {
+        byte[] buf = new byte[sizes.get(key)];
+        raf.seek(pointers.get(key));
+        raf.read(buf);
+        oCache.put(key, buf);
+      }
       keysList.remove(key);
       return true;
     } catch (Exception e) { }
@@ -101,9 +110,14 @@ public class NanoDB {
   @return boolean true if success
   */
   public boolean updateObject(String key, byte[] buf) {
-    if (keysList.contains(key)) try {
+    try {
       if (cache.containsKey(key)) oCache.put(key, cache.get(key));
-      else oCache.put(key, readKey(key));
+      else {
+        byte[] bb = new byte[sizes.get(key)];
+        raf.seek(pointers.get(key));
+        raf.read(bb);
+        oCache.put(key, bb);
+      }
       cache.put(key, buf);
       return true;
     } catch (Exception ex) { }
@@ -180,7 +194,7 @@ public class NanoDB {
     // keys block-format: keyLength + dataLength + key = 2+4+n bytes
     for (int kl, dl, d, i = 0; i < all.length; i += (6+kl)) {
       // compute key Length and Data leng
-      kl = (((int)all[i]   & 0xFF) << 8)|((int)all[i+1] & 0xFF);
+      kl = (((int)all[i]   & 0xFF) << 8) | ((int)all[i+1] & 0xFF);
       dl = (((int)all[i+2] & 0xFF) << 24)|(((int)all[i+3] & 0xFF) << 16)|
            (((int)all[i+4] & 0xFF) << 8) | ((int)all[i+5] & 0xFF);
       // cache keysList and pointers and sizes
@@ -215,8 +229,9 @@ public class NanoDB {
   }
   /**
   save NanoDB without close -see close()
+  @exception Exception thrown by JAVA
   */
-  public void save() {    
+  public void save() throws Exception {    
     if (committed) {
       if (committed && oCache.size() > 0) { // recover the UNcommitted
         List<String> keys = new ArrayList<>(oCache.keySet());
@@ -234,7 +249,7 @@ public class NanoDB {
           }
         }
       }
-      if (cache.size() > 0) try {
+      if (cache.size() > 0) {
         ConcurrentHashMap<String, Long> pts = new ConcurrentHashMap<>(pointers.size());
         ConcurrentHashMap<String, Integer> szs = new ConcurrentHashMap<>(sizes.size());
         String tmp = String.format("%s_tmp", fName);
@@ -246,10 +261,6 @@ public class NanoDB {
           raf.close(); // data in cache: so delete
           if (cached) (new File(fName)).delete();
         }
-        while (locked) {
-          TimeUnit.MICROSECONDS.sleep(10);
-        }
-        locked = true;
         RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
         ByteArrayOutputStream bao = new ByteArrayOutputStream(65536);
         // the key block
@@ -301,31 +312,16 @@ public class NanoDB {
         } 
         raf = new RandomAccessFile(fName, "rw");
         fLocked = raf.getChannel().lock();
-      } catch (Exception ex) {
-        ex.printStackTrace();
       }
     }
     committed = false;
-    locked = false;
     existed = true;
     oCache.clear();
   }
   //---------------------------------------------------------------------------------------
-  private byte[] readKey(String key) {
-    if (keysList.contains(key)) {
-      try {
-        byte[] buf = new byte[sizes.get(key)];
-        raf.seek(pointers.get(key));
-        raf.read(buf);
-        return buf;
-      } catch (Exception ex) { }
-    }
-    return null;
-  }
-  //---------------------------------------------------------------------------------------
-  private volatile boolean locked = false, committed = false, existed = false, cached = false;
   private ConcurrentHashMap<String, byte[]> oCache =  new ConcurrentHashMap<>(256);
   private ConcurrentHashMap<String, byte[]> cache = new ConcurrentHashMap<>(256);
+  private volatile boolean committed = false, existed = false, cached = false;
   private ConcurrentHashMap<String, Integer> sizes;
   private ConcurrentHashMap<String, Long> pointers;
   private List<String> keysList;

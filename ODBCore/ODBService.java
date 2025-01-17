@@ -52,7 +52,7 @@ public class ODBService {
         dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(parms.primary)));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
         running = true; // loop until Shutdown....
-        while (true) parms.pool.execute(new ODBWorker(dbSvr.accept(), parms));
+        while (parms.loop) parms.pool.execute(new ODBWorker(dbSvr.accept(), parms));
       } catch (Exception e) { }
       if (!running) { // something wrong with dbSvr: hostName  Port?
         System.err.println("Cannot start JODB. Pls. check "+parms.webHostName);
@@ -256,6 +256,7 @@ public class ODBService {
   Grateful shutdown ODBServer
   */
   public void shutdown() {
+    parms.loop = false;
     try {
       dbSvr.close();
       dbSvr = null;

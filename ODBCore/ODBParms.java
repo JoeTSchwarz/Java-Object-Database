@@ -35,8 +35,8 @@ public class ODBParms {
   public ODBBroadcaster BC;
   public OutputStream logger;
   public ExecutorService pool;
-  public volatile boolean log;
   public ODBEventListener listener;
+  public volatile boolean log, loop = true;
   public String db_path, broadcaster, primary, userlist, webHostName;
   public List<String> nodes = new ArrayList<>(), remList = new ArrayList<>();
   //

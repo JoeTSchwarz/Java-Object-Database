@@ -42,7 +42,7 @@ public class ODBWorker implements Runnable {
     ODBObjectView oov = new ODBObjectView();
     ArrayList<String> notify = new ArrayList<>();
     // loop until JODB server exits
-    while (true) {
+    while (parms.loop) {
       try {
         ios.read(soc); // read the content from soc to ios
         ois = new ODBInputStream(ios.toByteArray());

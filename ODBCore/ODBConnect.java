@@ -568,7 +568,7 @@ public class ODBConnect {
   }
   //--------------------------------------------------------------------------
   protected void send(String dbName, int cmd, Object key, Object obj) throws Exception {
-    if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or obj/key is null");
+    if (!dbLst.contains(dbName)) throw new Exception("Unknown dbName "+dbName);
     ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
@@ -581,7 +581,7 @@ public class ODBConnect {
   }
   // Check dbName and key
   protected void send(String dbName, int cmd, Object key) throws Exception {
-    if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName or key is null");
+    if (!dbLst.contains(dbName)) throw new Exception("Unknown dbName "+dbName);
     ios.setCharset(charsets.get(dbName));
     //
     ios.reset();
@@ -593,7 +593,7 @@ public class ODBConnect {
   }
   //
   protected void send(String dbName, int cmd) throws Exception {
-    if (!dbLst.contains(dbName)) throw new Exception("Invalid dbName.");
+    if (!dbLst.contains(dbName)) throw new Exception("Unknown dbName "+dbName);
     ios.setCharset(charsets.get(dbName));
     //
     ios.reset();

@@ -161,7 +161,6 @@ public class ODBIOStream {
       go.close();
       soc.write(ByteBuffer.wrap(bao.toByteArray()));
     }
-    soc.socket().getOutputStream().flush();
   }
   /*
   Use for Receive (ODBConnect/ODBCluster) and send (ODBWorker).Formatted Input/Output 0-17+lengths, 
@@ -364,13 +363,13 @@ public class ODBIOStream {
   @exception Exception thrown by JAVA
   */
   public void read(SocketChannel soc) throws Exception {
-    ByteBuffer bbuf = ByteBuffer.allocateDirect(65536);
+    ByteBuffer bbuf = ByteBuffer.allocate(65536);
     int le = 0; pos = 0;
     do {
       bbuf.clear();
       le = soc.read(bbuf);
       if ((pos+le) >= MAX) enlarge(le);
-      ((ByteBuffer)bbuf.flip()).get(buf, pos, le);
+      bbuf.flip().get(buf, pos, le);
       pos += le;
     } while (le >= 65536);
     if (buf[0] == (byte)0x1F && buf[1] == (byte)0x8B &&  buf[2] == (byte)0x08) {
