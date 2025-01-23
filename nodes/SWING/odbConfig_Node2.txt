@@ -10,6 +10,7 @@
      localhost is the web name if it's local only
    - NULTICASTING the MultiCast IP for MulticastSocket
    - DELAY in milliseconds before shudown node (min. 1 millisecond, max. 1 second)
+   - MAX_CACHE_LIMIT int, max size of NanoDB for cache (min. 2MB max 1024 MB)
    - ODB_PATH/LOG_PATH  the abs. path for all ODB and for Logging
    
   Messaging facility for the nodes using the Multicast IP
@@ -22,8 +23,9 @@
 <WEB_HOST/IP> localhost />
 <PORT> 8888 />
 <MAX_THREADS> 4096 />
-<DELAY> 2 />
+<DELAY> 10 />
 <MULTICASTING> 224.0.1.3:7777 />
+<MAX_CACHE_LIMIT> 2 />
 <!------------------------------------------------------------------------------------------------
    working environment
 ------------------------------------------------------------------------------------------------!>
