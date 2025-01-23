@@ -31,6 +31,9 @@ public class ODBService {
               LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
               d, month, year, now.getHour(), now.getMinute(), now.getSecond());
     parms.logger = new BufferedOutputStream(new FileOutputStream(logName, false));
+    parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT"));
+    if (parms.limit > 0x40000000)  parms.limit = 0x40000000;
+    else if (parms.limit < 0x200000) parms.limit = 0x200000;
     log = map.get("LOGGING").charAt(0) == '1';
     parms.log = log;
     //

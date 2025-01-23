@@ -98,7 +98,7 @@ public class ODBManager implements ODBEventListening {
   */
   public void connect(String uID, String dbName, String cs) throws Exception {
     if (nanoMap.get(dbName) == null) {
-      NanoDB nano = new NanoDB(parms.db_path+dbName, cs);
+      NanoDB nano = new NanoDB(parms.db_path+dbName, cs, parms.limit);
       nanoMap.put(dbName, nano);
       nano.open();
     }

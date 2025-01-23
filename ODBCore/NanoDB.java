@@ -28,11 +28,24 @@ public class NanoDB {
   /**
   constructor
   @param fName  String, file name
+  @param limit  int, max. size to be cached
+  @exception Exception thrown by JAVA
+  */
+  public NanoDB(String fName, int limit) {
+    this.fName = fName;
+    this.limit = limit;
+    cs = Charset.forName("UTF-8");
+  }
+  /**
+  constructor
+  @param fName  String, file name
+  @param limit  int, max. size to be cached
   @param charsetName String, character set name (e.g. "UTF-8");
   @exception Exception thrown by JAVA
   */
-  public NanoDB(String fName, String charsetName) {
+  public NanoDB(String fName, String charsetName, int limit) {
     this.fName = fName;
+    this.limit = limit;
     cs = Charset.forName(charsetName);
   }
   /**
@@ -186,7 +199,7 @@ public class NanoDB {
     fLocked = raf.getChannel().lock();
     if (!existed) return; // new NanoDB
     // cached only if size < 2MB (2097152)
-    cached = raf.length() < 0x200000;
+    cached = raf.length() < limit;
     //
     long pt  = (long)raf.readInt();
     byte[] all = new byte[(int)(pt - 4)];
@@ -326,6 +339,7 @@ public class NanoDB {
   private ConcurrentHashMap<String, Long> pointers;
   private List<String> keysList;
   private RandomAccessFile raf;
+  private int limit = 0x200000;
   private FileLock fLocked;
   private String fName;
   private Charset cs;
