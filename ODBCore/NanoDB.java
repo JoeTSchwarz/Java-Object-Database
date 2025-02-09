@@ -103,7 +103,7 @@ public class NanoDB {
   @return boolean true if success
   */
   public boolean deleteObject(String key) {
-    try {
+    if (!oCache.containsKey(key)) try {
       if (cache.containsKey(key)) oCache.put(key, cache.remove(key));
       else {
         byte[] buf = new byte[sizes.get(key)];
@@ -123,7 +123,7 @@ public class NanoDB {
   @return boolean true if success
   */
   public boolean updateObject(String key, byte[] buf) {
-    try {
+    if (!oCache.containsKey(key)) try {
       if (cache.containsKey(key)) oCache.put(key, cache.get(key));
       else {
         byte[] bb = new byte[sizes.get(key)];
@@ -266,16 +266,17 @@ public class NanoDB {
         ConcurrentHashMap<String, Long> pts = new ConcurrentHashMap<>(pointers.size());
         ConcurrentHashMap<String, Integer> szs = new ConcurrentHashMap<>(sizes.size());
         String tmp = String.format("%s_tmp", fName);
-        fLocked.release(); // release raf
         if (!existed || cached) {
-          pts = pointers;
-          szs = sizes;
           tmp = fName;
+          szs = sizes;
+          pts = pointers;
+          fLocked.release(); // release raf
           raf.close(); // data in cache: so delete
           if (cached) (new File(fName)).delete();
         }
-        RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
         ByteArrayOutputStream bao = new ByteArrayOutputStream(65536);
+        RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
+        FileLock fL = rTmp.getChannel().lock();
         // the key block
         for (String key : keysList) {
           int kl = key.length();
@@ -313,8 +314,10 @@ public class NanoDB {
           szs.put(k, bb.length);
           pts.put(k, pt);
         }
+        fL.release();
         rTmp.close();
         if (existed && !cached) {
+          fLocked.release();
           raf.close();
           File fi = new File(fName);
           fi.delete(); // delete the old
