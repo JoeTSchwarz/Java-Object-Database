@@ -207,9 +207,9 @@ public class NanoDB {
     // keys block-format: keyLength + dataLength + key = 2+4+n bytes
     for (int kl, dl, d, i = 0; i < all.length; i += (6+kl)) {
       // compute key Length and Data leng
-      kl = (((int)all[i]   & 0xFF) << 8) | ((int)all[i+1] & 0xFF);
-      dl = (((int)all[i+2] & 0xFF) << 24)|(((int)all[i+3] & 0xFF) << 16)|
-           (((int)all[i+4] & 0xFF) << 8) | ((int)all[i+5] & 0xFF);
+      kl = (((int)all[i]   & 0xFF) * 0x100) | ((int)all[i+1] & 0xFF);
+      dl = (((int)all[i+2] & 0xFF) * 0x1000000)|(((int)all[i+3] & 0xFF) * 0x10000)|
+           (((int)all[i+4] & 0xFF) * 0x100) | ((int)all[i+5] & 0xFF);
       // cache keysList and pointers and sizes
       String key = new String(all, i+6, kl, cs);
       if (cached) { // cached
@@ -281,22 +281,22 @@ public class NanoDB {
         for (String key : keysList) {
           int kl = key.length();
           int dl = cache.containsKey(key)? cache.get(key).length:sizes.get(key);
-          bao.write(new byte[] { (byte)((kl & 0xFF00) >> 8),
-                                 (byte) (kl & 0xFF),
-                                 (byte)((dl & 0xFF000000) >> 24),
-                                 (byte)((dl & 0xFF0000) >> 16),
-                                 (byte)((dl & 0xFF00) >> 8),
-                                 (byte) (dl & 0xFF)
+          bao.write(new byte[] { (byte)(kl / 0x100),
+                                 (byte) kl,
+                                 (byte)(dl / 0x1000000),
+                                 (byte)(dl / 0x10000),
+                                 (byte)(dl / 0x100),
+                                 (byte) dl
                                }
                    );
           bao.write(key.getBytes(cs));
         }
         bao.flush();
         long pt = 4+bao.size();
-        rTmp.write(new byte[] {(byte)(((int)pt & 0xFF000000) >> 24),
-                               (byte)(((int)pt & 0xFF0000) >> 16),
-                               (byte)(((int)pt & 0xFF00) >> 8),
-                               (byte) ((int)pt & 0xFF)
+        rTmp.write(new byte[] {(byte)((int)pt / 0x1000000),
+                               (byte)((int)pt / 0x10000),
+                               (byte)((int)pt / 0x100),
+                               (byte) (int)pt
                               }
                   );
         rTmp.write(bao.toByteArray());
