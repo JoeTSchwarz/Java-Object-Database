@@ -34,6 +34,8 @@ public class ODBService {
     parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
     if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
     else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
+    parms.nodeList = Collections.synchronizedList(new ArrayList< >());
+    parms.remList = Collections.synchronizedList(new ArrayList< >());
     // load cluster nodes
     for (int i = 1; ; ++i) {
       String node = map.get("NODE_"+i);
