@@ -35,7 +35,7 @@ public class ServerTab implements ODBEventListening {
     logOn = prop.get("LOGGING").charAt(0) == '1';
     if (logOn) log.setText("LOG Disable");
     else log.setText("LOG Enable");
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PORT");
+    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
     report = (JTextArea) map.get("area1");
     report.setText("Report Area.\n");
     report.setEditable(false);
@@ -137,13 +137,15 @@ public class ServerTab implements ODBEventListening {
     ((JButton) map.get("exit")).addActionListener(e -> {
       if (odbService != null) {
         String[] aut = JOptions.login(frame, "SuperUser Authentication");
-        if(aut[0].length() > 0 && aut[1].length() > 0 && uList.isSuperuser(aut[1], aut[0])) {
-          odbService.shutdown();        
-          registered = false;
-          odbService = null;
-        } else {
-          report.append("Illegally try to shutdown ODBServer.\n");
-          return;
+        if (aut != null) {
+          if(aut[0].length() > 0 && aut[1].length() > 0 && uList.isSuperuser(aut[1], aut[0])) {
+            odbService.shutdown();        
+            registered = false;
+            odbService = null;
+          } else {
+            report.append("Illegally try to shutdown ODBServer.\n");
+            return;
+          }
         }
       }
       if (odbService == null) System.exit(0);
