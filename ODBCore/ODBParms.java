@@ -13,16 +13,14 @@ public class ODBParms {
   Constructor. Global parameters for JODB
   @param db_path String, path to JODB files
   */
-  public ODBParms(String db_path) {
-    this.db_path = db_path;
-  }
+  public ODBParms( ) { }
   /**
   @param msg String, the message to be logged
   */
   public void logging(String msg) {
     if (log) synchronized(logger) {
       try {
-        logger.write((msg+ls).getBytes());
+        logger.write((msg+System.lineSeparator()).getBytes());
         logger.flush();
       } catch (Exception ex) {
         System.err.println("Unable to log: "+msg);
@@ -30,15 +28,12 @@ public class ODBParms {
     }
   }
   //
-  public int delay;
+  public int limit;
   public ODBManager odMgr;
   public ODBBroadcaster BC;
   public OutputStream logger;
-  public ExecutorService pool;
   public ODBEventListener listener;
   public volatile boolean log, loop = true;
   public String db_path, broadcaster, primary, userlist, webHostName;
-  public List<String> nodes = new ArrayList<>(), remList = new ArrayList<>();
-  //
-  private String ls = System.lineSeparator();
+  public List<String> nodeList = new ArrayList<>(), remList = new ArrayList<>();
 }
