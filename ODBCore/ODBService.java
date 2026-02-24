@@ -21,59 +21,54 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public ODBService(String config) throws Exception {
-    HashMap<String, String> map = ODBParser.odbProperty(config);
-    parms = new ODBParms(map.get("ODB_PATH").replace(File.separator, "/")+"/");
-    //
+    parms = new ODBParms( );
     LocalDateTime now = LocalDateTime.now();
+    HashMap<String, String> map = ODBParser.odbProperty(config);
+    parms.db_path = map.get("ODB_PATH").replace(File.separator, "/")+"/";
     // create a LOG txt file with DayOfWeek day Month Year Hour minute Second
     int d = now.getDayOfMonth(), month = now.getMonthValue(), year = now.getYear();
     logName = map.get("LOG_PATH")+String.format("%s_%02d_%02d_%04d_%02dH%02dMin%02dSec.txt",
               LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
               d, month, year, now.getHour(), now.getMinute(), now.getSecond());
     parms.logger = new BufferedOutputStream(new FileOutputStream(logName, false));
-    parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT"));
-    if (parms.limit > 0x40000000)  parms.limit = 0x40000000;
-    else if (parms.limit < 0x200000) parms.limit = 0x200000;
-    log = map.get("LOGGING").charAt(0) == '1';
-    parms.log = log;
-    //
-    d = Integer.parseInt(map.get("DELAY"));
-    parms.delay = d > 1000? 1000:d;
-    parms.userlist =  map.get("USERLIST");
+    parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
+    if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
+    else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
     // load cluster nodes
+    for (int i = 1; ; ++i) {
+      String node = map.get("NODE_"+i);
+      if (node == null) break;
+      parms.nodeList.add(node.toLowerCase());
+    }
+    parms.log = map.get("LOGGING").charAt(0) == '1';
+    parms.userlist =  map.get("USERLIST");
     hostName = map.get("WEB_HOST/IP");
-    parms.primary = map.get("PORT"); // port
+    parms.primary = map.get("PRIMARY");
     parms.webHostName = hostName+":"+parms.primary;
-    d = Integer.parseInt(map.get("MAX_THREADS"));
-    if (d < 1014) d = 1024; // min. 1K threads
-    parms.pool = Executors.newFixedThreadPool(d);
+    parms.broadcaster =  map.get("MULTICASTING");
+    parms.BC = new ODBBroadcaster(parms.broadcaster);
+    parms.listener = new ODBEventListener(parms.broadcaster);
+    // launch Broadcaster, Listener, ODBManager and server
+    pool = Executors.newFixedThreadPool(64);
+    pool.execute(parms.listener);
+    pool.execute(parms.BC);
     // Start JODB server for listening
-    parms.pool.execute(() -> {
-      boolean running = false;
+    pool.execute(() -> {
       try {
         dbSvr = ServerSocketChannel.open();
         dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(parms.primary)));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
-        running = true; // loop until Shutdown....
-        while (parms.loop) parms.pool.execute(new ODBWorker(dbSvr.accept(), parms));
+        while (parms.loop) (new ODBWorker(dbSvr.accept(), parms)).start();
       } catch (Exception e) { }
-      if (!running) { // something wrong with dbSvr: hostName  Port?
+      if (parms.loop) { // something wrong with dbSvr: hostName  Port?
         System.err.println("Cannot start JODB. Pls. check "+parms.webHostName);
         System.exit(0);
       }
     });
-    // start ODBBroadcaster and ODBEventListener
-    parms.broadcaster =  map.get("MULTICASTING");
-    parms.BC = new ODBBroadcaster(parms.broadcaster);
-    parms.listener = new ODBEventListener(parms.broadcaster);
-    // start Broadcaster, Listener and ODBManager
-    parms.pool.execute(parms.BC);
-    parms.pool.execute(parms.listener);
-    odMgr = new ODBManager(parms);
-    // Start listening for shutdown or catastrophe...
+    parms.odMgr = new ODBManager(parms);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
-        if (dbSvr != null) shutdown( );
+        if (parms.loop) shutdown( );
       }
     });
   }
@@ -82,13 +77,12 @@ public class ODBService {
   @return ExecutorService pool
   */
   public ExecutorService getPool() {
-    return parms.pool;
+    return pool;
   }
   /**
   @param enabled boolean, true: log is enabled, false: log is disabled
   */
   public void setLog(boolean enabled) {
-    if (!log) log = enabled;
     parms.log = enabled;
   }
   /**
@@ -103,14 +97,14 @@ public class ODBService {
   @param node String with the foemat HostName:Port or HostIP:Port
   */
   public void removeNode(String node) {
-    if (!parms.remList.contains(node)) parms.BC.broadcast(7, node, parms.nodes);
+    if (!parms.remList.contains(node)) parms.BC.broadcast(7, node, parms.nodeList);
   }
   /**
   addNode a new node to the cluster ring
   @param node String with the foemat HostName:Port or HostIP:Port
   */
   public void addNode(String node) {
-    if (parms.remList.contains(node)) parms.BC.broadcast(6, node, parms.nodes);
+    if (parms.remList.contains(node)) parms.BC.broadcast(6, node, parms.nodeList);
   }
   /**
   ping a cluster node
@@ -146,7 +140,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedClose(String dbName) throws Exception {
-    boolean b = odMgr.forcedClose(dbName);
+    boolean b = parms.odMgr.forcedClose(dbName);
     if (b) parms.BC.broadcast(9, parms.webHostName,
                                  Arrays.asList(dbName+" is forced to close."));
     return b;
@@ -159,7 +153,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedFreeKey(String dbName, Object key) throws Exception {
-    boolean b = odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), true);
+    boolean b = parms.odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), true);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to unlock."));
@@ -173,7 +167,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedRollbackKey(String dbName, Object key) throws Exception {
-    boolean b = odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), false);
+    boolean b = parms.odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), false);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to rollback."));
@@ -186,7 +180,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedFreeKeys(String dbName) throws Exception {
-    boolean b = odMgr.restoreKeys("*", dbName, true);
+    boolean b = parms.odMgr.restoreKeys("*", dbName, true);
     if (b) parms.BC.broadcast(4, parms.webHostName,
                               Arrays.asList("All keys of "+dbName+" are forced to unlock."));
     return b;
@@ -198,7 +192,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedRollback(String dbName) throws Exception {
-    boolean b = odMgr.restoreKeys("*", dbName, false);
+    boolean b = parms.odMgr.restoreKeys("*", dbName, false);
     if (b) parms.BC.broadcast(4, parms.webHostName,
                               Arrays.asList("All keys of "+dbName+" are forced to rollback."));
     return b;
@@ -209,7 +203,7 @@ public class ODBService {
   @return boolean true if successful
   */
   public boolean removeClient(String uID) {
-    return odMgr.removeClient(uID);
+    return parms.odMgr.removeClient(uID);
   }
   /**
   register() to JODB's server for ODBEventListening
@@ -230,14 +224,14 @@ public class ODBService {
   @return List of DB names
   */
   public ArrayList<String> dbList() {
-    return odMgr.dbList();
+    return parms.odMgr.dbList();
   }
   /**
   activeClients returns a list of active DB userID
   @return List of userID
   */
   public ArrayList<String> activeClients() {
-    return odMgr.activeClients();
+    return parms.odMgr.activeClients();
   }
   /**
   activeUsers of active DB
@@ -245,7 +239,7 @@ public class ODBService {
   @return list of active users of this dbName
   */
   public ArrayList<String> activeWorkers(String dbName) {
-    return odMgr.activeWorkers(dbName);
+    return parms.odMgr.activeWorkers(dbName);
   }
   /**
   keyOwners
@@ -253,31 +247,30 @@ public class ODBService {
   @return List of user ID who owns the db keys (null if dbName is unknown)
   */
   public ArrayList<String> lockedKeyList(String dbName) {
-    return odMgr.lockedKeyList("*", dbName);
+    return parms.odMgr.lockedKeyList("*", dbName);
   }
   /**
   Grateful shutdown ODBServer
   */
   public void shutdown() {
-    parms.loop = false;
     try {
+      parms.odMgr.shutdown( );
+      parms.loop = false;
       dbSvr.close();
-      dbSvr = null;
-      odMgr.shutdown();
+      if (parms.logger != null) {
+        parms.logger.write(("ODBService is down."+System.lineSeparator()).getBytes());
+        parms.logger.close();
+      }
+      if (!parms.log) (new File(logName)).delete();
       parms.listener.exit(); // stop Listener
       parms.BC.exit(); // stop ODBBroadcaster
-      parms.logging("ODBService is down.");
-      parms.logger.close();
-      if (!log) (new File(logName)).delete();
-      parms.pool.shutdownNow(); // close Pool
-      TimeUnit.MILLISECONDS.sleep(parms.delay);
     } catch (Exception ex) { }
+    pool.shutdownNow(); // close Pool
   }
   //
   private ODBIOStream ios = new ODBIOStream();
   private ServerSocketChannel dbSvr;
   private String hostName, logName;
-  private ODBManager odMgr;
+  private ExecutorService pool;
   private ODBParms parms;
-  private boolean log;
 }
