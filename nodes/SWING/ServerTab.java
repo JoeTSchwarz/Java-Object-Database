@@ -56,7 +56,6 @@ public class ServerTab implements ODBEventListening {
           registered = true;
         }
         log.setEnabled(true);
-        pool = odbService.getPool();
         serverController.setService(odbService);
         ((JButton)map.get("keys")).setEnabled(true);
         ((JButton)map.get("list")).setEnabled(true);
@@ -157,7 +156,7 @@ public class ServerTab implements ODBEventListening {
   @param e ODBEvent
   */
   public void odbEvent(ODBEvent e) {
-    pool.execute(() -> {
+    SwingUtilities.invokeLater(() -> {
       String node = e.getActiveNode();
       int type = e.getEventType();
       if (type == 13 || type != 12 && node.equals(webHost)) return;
@@ -238,7 +237,6 @@ public class ServerTab implements ODBEventListening {
   private JFrame frame;
   private UserList uList;
   private JTextArea report;
-  private ExecutorService pool;
   private ServerTab This = this;
   private ODBService odbService;
   private String webHost, config;
