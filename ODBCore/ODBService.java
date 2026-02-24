@@ -51,7 +51,7 @@ public class ODBService {
     parms.BC = new ODBBroadcaster(parms.broadcaster);
     parms.listener = new ODBEventListener(parms.broadcaster);
     // launch Broadcaster, Listener, ODBManager and server
-    pool = Executors.newFixedThreadPool(64);
+    pool = Executors.newFixedThreadPool(8);
     pool.execute(parms.listener);
     pool.execute(parms.BC);
     // Start JODB server for listening
@@ -73,13 +73,6 @@ public class ODBService {
         if (parms.loop) shutdown( );
       }
     });
-  }
-  /**
-  getPool
-  @return ExecutorService pool
-  */
-  public ExecutorService getPool() {
-    return pool;
   }
   /**
   @param enabled boolean, true: log is enabled, false: log is disabled

@@ -14,9 +14,7 @@ public class ODBParms {
   @param db_path String, path to JODB files
   */
   public ODBParms( ) { }
-  /**
-  @param msg String, the message to be logged
-  */
+  //
   public void logging(String msg) {
     if (log) synchronized(logger) {
       try {
