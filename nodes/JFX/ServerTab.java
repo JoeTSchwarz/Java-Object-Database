@@ -126,17 +126,19 @@ public class ServerTab implements Initializable, ODBEventListening {
   @FXML private void exit() {
     if (odbService != null) {
       String[] aut = JFXController.jfx.login("Superuser Authentication");
-      if (aut[0] == null || aut[1] == null || !uList.isSuperuser(aut[1], aut[0])) {
-        report.appendText("Illegally try to shutdown ODBServer.\n");
-        return;
+      if (aut != null) {
+        if (aut[0] == null || aut[1] == null || !uList.isSuperuser(aut[1], aut[0])) {
+          report.appendText("Illegally try to shutdown ODBServer.\n");
+          return;
+        }
+        odbService.shutdown();        
+        registered = false;
+        odbService = null;
       }
-      odbService.shutdown();        
-      registered = false;
-      odbService = null;
-    }
-    if (odbService == null) {
-      Platform.exit();
-      System.exit(0);
+      if (odbService == null) {
+        Platform.exit();
+        System.exit(0);
+      }
     }
   }
   // implement the ODBEvent-----------------------------------------------------
@@ -149,7 +151,6 @@ public class ServerTab implements Initializable, ODBEventListening {
       String node = e.getActiveNode();
       int type = e.getEventType();
       if (type == 13 || type != 12 && node.equals(webHost)) return;
-      //
       switch (type) {
         case 0:
           report.appendText(node+" is DOWN\n");
@@ -228,7 +229,7 @@ public class ServerTab implements Initializable, ODBEventListening {
     logOn = prop.get("LOGGING").charAt(0) == '1';
     if (logOn) LogEnable.setText("LOG Disable");
     else LogEnable.setText("LOG Enable");
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PORT");
+    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
     PingNode.setButtonCell(new ListCell<>() {
       @Override // set prompt text if empty or 0 item
       protected void updateItem(String item, boolean empty) {
