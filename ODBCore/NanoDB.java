@@ -17,7 +17,7 @@ Nano Database. Instantiated and maintained by ODBManager
 */
 public class NanoDB {
   /**
-  constructor
+  constructor with 2 MB Cache
   @param fName  String, file name
   @exception Exception thrown by JAVA
   */
