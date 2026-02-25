@@ -53,7 +53,6 @@ public class NanoDB {
   @return ArrayList of strings (as keys) or an empty arraylist if NanoDB must be created
   */
   public ArrayList<String> getKeys() {
-    if (keysList.size() == 0) return new ArrayList<String>();
     return new ArrayList<>(keysList);
   }
   /**
@@ -83,7 +82,8 @@ public class NanoDB {
     if (cache.containsKey(key)) return cache.get(key);
     byte[] buf = new byte[sizes.get(key)];
     raf.seek(pointers.get(key));
-    raf.read(buf);
+    raf.read(buf); // fetch
+    cache.put(key, buf);
     return buf;
   }
   /**
@@ -128,7 +128,7 @@ public class NanoDB {
       else {
         byte[] bb = new byte[sizes.get(key)];
         raf.seek(pointers.get(key));
-        raf.read(bb);
+        raf.read(bb); // fetch
         oCache.put(key, bb);
       }
       cache.put(key, buf);
@@ -179,8 +179,7 @@ public class NanoDB {
   @param kLst String arraylist of keys of object to be rollbacked
   */
   public void rollback(List<String> kLst) {
-    if (oCache.size() == 0) return;
-    for (String key : kLst) rollback(key);
+    if (oCache.size() > 0) for (String key : kLst) rollback(key);
   }
   /**
   open NanoDB

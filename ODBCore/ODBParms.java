@@ -10,11 +10,12 @@ import java.util.concurrent.*;
 */
 public class ODBParms {
   /**
-  Constructor. Global parameters for JODB
-  @param db_path String, path to JODB files
+  Constructor. Global parameters of ODB
   */
   public ODBParms( ) { }
-  //
+  /**
+  @param msg, String -message to be logged
+  */
   public void logging(String msg) {
     if (log) synchronized(logger) {
       try {

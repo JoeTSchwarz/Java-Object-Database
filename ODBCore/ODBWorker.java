@@ -18,7 +18,7 @@ Object Database Worker
 */
 public class ODBWorker extends Thread {
   /**
-  contructor. Associated partner of Client app
+  contructor. Associated partner of Client's ODBConnect
   @param soc   SocketChannel
   @param parms ODBParms, odb Parameters
   */
@@ -38,7 +38,7 @@ public class ODBWorker extends Thread {
     ODBInputStream ois;
     ArrayList<String> kLst;
     ODBManager odMgr = parms.odMgr;
-    ODBIOStream ios = new ODBIOStream( );
+    ODBIOStream ios = new ODBIOStream();
     ODBObjectView oov = new ODBObjectView();
     ArrayList<String> notify = new ArrayList<>();
     // loop until JODB server exits
@@ -68,7 +68,7 @@ public class ODBWorker extends Thread {
             odMgr.uIDList.add(uID);
             odMgr.workers.add(this);
             ios.writeMsg(priv+"/"+uID+"/"+parms.broadcaster);
-            if (uID.charAt(0) != '+') logging(uID+" is connected."); // abs. Path
+            if (uID.charAt(0) != '+') parms.logging(uID+" is connected."); // abs. Path
             ios.writeBool(true);
             break;
           }
@@ -92,7 +92,7 @@ public class ODBWorker extends Thread {
           } catch (Exception ex) { }
           odMgr.uIDList.remove(uID);
           odMgr.workers.remove(this);
-          if (uID.charAt(0) != '+') logging(uid+" disconnected.");
+          if (uID.charAt(0) != '+') parms.logging(uid+" disconnected.");
           exit();
           return;
         case 3: // getKeys(dbName)
@@ -108,27 +108,27 @@ public class ODBWorker extends Thread {
           key = ois.readToken( ); // key
           odMgr.add(uID, dbName, key, ois.readBytes());
           if (uID.charAt(0) != '+')
-            logging("Object with key: "+key+" added to "+dbName+" by "+uID);
+            parms.logging("Object with key: "+key+" added to "+dbName+" by "+uID);
           if (notify.contains(dbName)) 
             parms.BC.broadcast(11, uID+"|"+dbName, Arrays.asList(key+" is added by "+uID));
           break;
         case 7: // unlock(dbName) all keys
           ios.writeBool(odMgr.unlock(uID, dbName));
           if (uID.charAt(0) != '+')
-            logging("Unlocked all keys of "+dbName+" by "+uID);
+            parms.logging("Unlocked all keys of "+dbName+" by "+uID);
           break;
         case 8: // update(dbName, key, obj)
           key = ois.readToken( ); // key
           if (odMgr.update(uID, dbName, key, ois.readBytes())) {
             ios.writeBool(true);
             if (uID.charAt(0) != '+')
-              logging("Object with key: "+key+" of "+dbName+" updated by "+uID);
+              parms.logging("Object with key: "+key+" of "+dbName+" updated by "+uID);
             if (notify.contains(dbName)) 
               parms.BC.broadcast(11, uID+"|"+dbName, Arrays.asList(key+" is updated by "+uID));
           } else {
             ios.writeBool(false);
             if (uID.charAt(0) != '+')
-              logging(uID+" updated "+dbName+" failed: "+key+" is unknown or unlocked");
+              parms.logging(uID+" updated "+dbName+" failed: "+key+" is unknown or unlocked");
           }
           break;
         case 9: // delete(dbName, key)
@@ -136,20 +136,20 @@ public class ODBWorker extends Thread {
           if (odMgr.delete(uID, dbName, key)) {
             ios.writeBool(true);
             if (uID.charAt(0) != '+') 
-              logging("Object with key: "+key+" of "+dbName+" deleted by "+uID);
+              parms.logging("Object with key: "+key+" of "+dbName+" deleted by "+uID);
             if (notify.contains(dbName))
               parms.BC.broadcast(11, uID+"|"+dbName, Arrays.asList(key+" is deleted by "+uID));
           } else {
             ios.writeBool(false);
             if (uID.charAt(0) != '+')
-              logging(uID+" deleted "+dbName+" failed: "+key+" is unknown or unlocked");
+              parms.logging(uID+" deleted "+dbName+" failed: "+key+" is unknown or unlocked");
           }
           break;
         case 10: // read(dbName, key). Regardless of locked or unlocked
           key = ois.readToken( );
           ios.writeObj(odMgr.read(uID, dbName, key));
           if (uID.charAt(0) != '+')
-            logging("Object with key: "+key+" of "+dbName+" read by "+uID);
+            parms.logging("Object with key: "+key+" of "+dbName+" read by "+uID);
           break;
         case 11: // isExisted(dbName, key)
           ios.writeBool(odMgr.isExisted(uID, dbName, ois.readToken( )));
@@ -162,13 +162,13 @@ public class ODBWorker extends Thread {
           key = ois.readToken( );
           ios.writeBool(odMgr.lock(uID, dbName, key));
           if (uID.charAt(0) != '+')
-            logging("Key: "+key+" of "+dbName+" locked by "+uID);
+            parms.logging("Key: "+key+" of "+dbName+" locked by "+uID);
           break;
         case 14: // unlock(dbName, key)
           key = ois.readToken( );
           ios.writeBool(odMgr.unlock(uID, dbName, key));
           if (uID.charAt(0) != '+')
-            logging("Key: "+key+" of "+dbName+" unlocked by "+uID);
+            parms.logging("Key: "+key+" of "+dbName+" unlocked by "+uID);
           break;
         case 15: // rollback(dbName) or rollback(dbName, key)
           if (odMgr.isAutoCommit(uID)) {
@@ -180,12 +180,12 @@ public class ODBWorker extends Thread {
             if (odMgr.isLocked(uID, dbName, key)) {
               ios.writeBool(odMgr.restoreKey(uID, dbName, key, false));
               if (uID.charAt(0) != '+')
-                logging("Key: "+key+" of "+dbName+" rollbacked by "+uID);
+                parms.logging("Key: "+key+" of "+dbName+" rollbacked by "+uID);
             } else ios.writeErr(key+" must be locked before rollback.");
           } else {
             ios.writeBool(odMgr.restoreKeys(uID, dbName, false));
             if (uID.charAt(0) != '+')
-              logging("All keys of "+dbName+" rollbacked by "+uID);
+              parms.logging("All keys of "+dbName+" rollbacked by "+uID);
           }
           break;
         case 16: // ODBCluster - connect(dbName, charset) - connect only if ODB exists
@@ -196,23 +196,23 @@ public class ODBWorker extends Thread {
           if (priv < 1 && !existed) {
             ios.writeErr(dbName+" does not exist and "+uid+" lacks of RW-Privilege.");
             if (uID.charAt(0) != '+')
-              logging(uID+" tried to connect "+dbName+", but failed. Reason: privilege:"+priv);
+              parms.logging(uID+" tried to connect "+dbName+", but failed. Reason: privilege:"+priv);
             break;
           }
           if (priv > 0 || existed) {
             String cs = ois.readToken();
             odMgr.connect(uID, dbName, cs); // setup dbAgents on cluster
             if (!parms.remList.contains(parms.webHostName)) odMgr.bindAgent("+"+uID+"|"+dbName, cs);
-            if (uID.charAt(0) != '+') logging(dbName+" (charset:"+cs+") connected with "+uID);
+            if (uID.charAt(0) != '+') parms.logging(dbName+" (charset:"+cs+") connected with "+uID);
           } else ios.writeErr(dbName+" does not exist. Or "+uid+" lacks of RW-Privilege.");
           break;
         case 18: // close(dbName)
           odMgr.close(uID, dbName);
-          if (uID.charAt(0) != '+') logging(dbName+" closed by "+uID);
+          if (uID.charAt(0) != '+') parms.logging(dbName+" closed by "+uID);
           break;
         case 19: // save(dbName)
           odMgr.save(uID, dbName);
-          if (uID.charAt(0) != '+') logging(dbName+" saved by"+uID);
+          if (uID.charAt(0) != '+') parms.logging(dbName+" saved by"+uID);
           break;
         case 20: // xDelete
           key = ois.readToken( ); // key
@@ -221,7 +221,7 @@ public class ODBWorker extends Thread {
               if (odMgr.isAutoCommit(uID) || odMgr.restoreKey(uID, dbName, key, true)) {
                 ios.writeBool(true);
                 if (uID.charAt(0) != '+')
-                  logging("xDeleted key: "+key+" of "+dbName+" by "+uID);
+                  parms.logging("xDeleted key: "+key+" of "+dbName+" by "+uID);
                 if (notify.contains(dbName)) 
                   parms.BC.broadcast(11, uID+"|"+dbName, Arrays.asList(key+" is deleted by "+uID));
               } else ios.writeErr("xDelete/commit "+dbName+" @"+key+" failed.");
@@ -229,7 +229,7 @@ public class ODBWorker extends Thread {
             }
             ios.writeErr("xDelete "+dbName+" @"+key+" failed.");
             if (uID.charAt(0) != '+')
-              logging("xDeleted key: "+key+" of "+dbName+" by "+uID+", but failed.");
+              parms.logging("xDeleted key: "+key+" of "+dbName+" by "+uID+", but failed.");
           } else ios.writeErr("xDelete: Cannot lock Key "+key);
           odMgr.unlock(uID, dbName, key);
           ios.writeBool(false);
@@ -241,7 +241,7 @@ public class ODBWorker extends Thread {
                if (odMgr.isAutoCommit(uID) || odMgr.restoreKey(uID, dbName, key, true)) {
                  ios.writeBool(true);
                  if (uID.charAt(0) != '+')
-                   logging("xUpdated key: "+key+" of "+dbName+" by "+uID);
+                   parms.logging("xUpdated key: "+key+" of "+dbName+" by "+uID);
                   if (notify.contains(dbName)) 
                     parms.BC.broadcast(11, uID+"|"+dbName, Arrays.asList(key+" is updated by "+uID));
                } else ios.writeErr("xUpdate/commit "+dbName+" @"+key+" failed.");
@@ -249,7 +249,7 @@ public class ODBWorker extends Thread {
              }
              ios.writeErr("xUpdate "+dbName+" @"+key+" failed.");
              if (uID.charAt(0) != '+') 
-               logging("xUpdated key: "+key+" of "+dbName+" by "+uID+", but failed.");
+               parms.logging("xUpdated key: "+key+" of "+dbName+" by "+uID+", but failed.");
           } else ios.writeErr("xUpdate: Cannot lock Key "+key);
           odMgr.unlock(uID, dbName, key);
           ios.writeBool(false);
@@ -261,17 +261,17 @@ public class ODBWorker extends Thread {
           if (odMgr.isLocked(uID, dbName, key)) {
             ios.writeBool(odMgr.restoreKey(uID, dbName, key, true));
             if (uID.charAt(0) != '+') 
-              logging("Key: "+key+" of "+dbName+" committed by "+uID);
+              parms.logging("Key: "+key+" of "+dbName+" committed by "+uID);
           } else {
             ios.writeErr(key+" must be locked before COMMIT.");
             if (uID.charAt(0) != '+')
-              logging("Key: "+key+" of "+dbName+" by "+uID+", but failed.");
+              parms.logging("Key: "+key+" of "+dbName+" by "+uID+", but failed.");
           }
           break;
         case 23: // commit all transaction
           ios.writeBool(odMgr.restoreKeys(uID, dbName, true));
           if (uID.charAt(0) != '+')
-            logging("All keys "+dbName+" committed by "+uID);
+            parms.logging("All keys "+dbName+" committed by "+uID);
           break;
         case 24: // lockedBy(dbName, key)
           String id = odMgr.lockedBy(dbName, ois.readToken( ));
@@ -287,7 +287,7 @@ public class ODBWorker extends Thread {
         case 27: // reset autoCommit ODBConnect
           odMgr.autoCommit(uID, cmd == 26);
           if (uID.charAt(0) != '+') 
-            logging("autoCommit("+(cmd == 26?"true":"false")+") set by "+uID);
+            parms.logging("autoCommit("+(cmd == 26?"true":"false")+") set by "+uID);
           ios.writeBool(cmd == 26);
           break;
         case 28: // isKeyFree
@@ -304,10 +304,10 @@ public class ODBWorker extends Thread {
           if (odbc == null) {
             ios.writeErr("Unknown "+keys[1]);
             if (uID.charAt(0) != '+')
-              logging("Unknown node "+keys[1]+". Add failed.");
+              parms.logging("Unknown node "+keys[1]+". Add failed.");
           } else {
             odbc.add("+"+uID+"|"+dbName, keys[0], ois.readBytes());
-            if (uID.charAt(0) != '+') logging("Add Object to node "+keys[1]);
+            if (uID.charAt(0) != '+') parms.logging("Add Object to node "+keys[1]);
           }
           break;
         case 30: // keysOwner(dbName) - ODBCluster
@@ -319,7 +319,7 @@ public class ODBWorker extends Thread {
                         EnDecrypt.decrypt(dbName),
                         EnDecrypt.decrypt(ois.readToken( ))));
           uList.save();
-          if (uID.charAt(0) != '+') logging("Password changed by "+uID);
+          if (uID.charAt(0) != '+') parms.logging("Password changed by "+uID);
           break;
         //------------------------extended DataMining----------------------------
         case 32: // allClassNames(String dbName)
@@ -354,7 +354,7 @@ public class ODBWorker extends Thread {
           }
           ios.writeObjList(sLst);
           if (uID.charAt(0) != '+')
-            logging("select("+dbName+","+key+","+pat+") by "+uID);
+            parms.logging("select("+dbName+","+key+","+pat+") by "+uID);
           break;
         case 35: // SQL(String dbName, String sql)
           /*
@@ -362,10 +362,10 @@ public class ODBWorker extends Thread {
             0      1    2  3     4   5     6  7     8  9     10 11    ...
            select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
           */
-          kLst = odMgr.getKeys(uID, dbName);
           String sql = ois.readToken();
-          String tmp[] = ODBParser.split(sql, " "); // faster
+          kLst = odMgr.getKeys(uID, dbName);
           ArrayList<byte[]> qLst = new ArrayList<>();
+          String tmp[] = ODBParser.split(sql, " "); // faster than regular expressions
           //String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
           try {
             for (String k : kLst) {
@@ -385,7 +385,7 @@ public class ODBWorker extends Thread {
           }
           ios.writeObjList(qLst);
           if (uID.charAt(0) != '+')
-            logging("sql("+dbName+","+sql+") by "+uID);
+            parms.logging("sql("+dbName+","+sql+") by "+uID);
           break;
         case 36: // selectAll(vName, "GT", 123456) or selectAll(vName, "GT", 123.456)
           key = ois.readToken();
@@ -399,7 +399,7 @@ public class ODBWorker extends Thread {
             if (oov.viewVar(ba, key, val[0], val[1])) aLst.add(ba);
           }
           if (uID.charAt(0) != '+') 
-            logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
+            parms.logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
           ios.writeObjList(aLst);
           break;
         case 37: // getClassName(dbName, key)
@@ -418,7 +418,7 @@ public class ODBWorker extends Thread {
             if (!notify.contains(dbName)) notify.add(dbName);
           } else notify.remove(dbName); // disable
           if (uID.charAt(0) != '+') 
-            logging("notify("+(enabled?"true":"false")+") set by "+uID);
+            parms.logging("notify("+(enabled?"true":"false")+") set by "+uID);
           break;
         case 40:
           parms.BC.broadcast(12, parms.webHostName, Arrays.asList(dbName));
@@ -441,7 +441,7 @@ public class ODBWorker extends Thread {
           return;
         default:
           ios.writeErr("Unknown Request:"+cmd);
-          if (uID.charAt(0) != '+') logging("Unknown Request:"+cmd);
+          if (uID.charAt(0) != '+') parms.logging("Unknown Request:"+cmd);
         }
         // send back the result
         ios.write(soc);
@@ -453,7 +453,7 @@ public class ODBWorker extends Thread {
             if(kLst != null && kLst.size() > 0) {
               for (String dbN:kLst) odMgr.unlock(uID, dbN);
             }
-            if (uID.charAt(0) != '+') logging("ODBServer was down or shutdown by Superuser.");
+            if (uID.charAt(0) != '+') parms.logging("ODBServer was down or shutdown by Superuser.");
             ios.writeErr("ODBServer was down or shutdown by Superuser...");
           } else ios.writeErr(e.toString());
           // send back the Exception message
@@ -471,17 +471,6 @@ public class ODBWorker extends Thread {
       soc = null;
     } catch (Exception e) { }
   }
-  //
-  private void logging(String msg) {
-    if (parms.log) synchronized(parms.logger) {
-      try {
-        parms.logger.write((msg+System.lineSeparator()).getBytes());
-        parms.logger.flush();
-      } catch (Exception ex) {
-        System.err.println("Unable to log: "+msg);
-      }
-    }
-  }
   // User authentication for ODBConnect
   private String authenticate(String encrypt) throws Exception {
     if (uID != null) return null; // already authenticated
@@ -496,10 +485,10 @@ public class ODBWorker extends Thread {
     if (uList.isUser(pw, uid)) {
       priv = uList.getPrivilege(pw, uid);
       uID = uid+"@"+String.format("%X", System.nanoTime());
-      logging("User "+uid+" successfully signs in. Assigned ID: "+uID);
+      parms.logging("User "+uid+" successfully signs in. Assigned ID: "+uID);
       return null;
     }
-    logging("User "+uid+" is unknown.");
+    parms.logging("User "+uid+" is unknown.");
     return "\""+uid+"\" is unknown.";
   }
   // -------------------------------------------------------------------------------

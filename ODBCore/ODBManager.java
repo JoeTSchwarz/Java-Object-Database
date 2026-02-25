@@ -22,10 +22,10 @@ public class ODBManager implements ODBEventListening {
     this.parms = parms;
     parms.odMgr = this;
     parms.listener.addListener(this);
-    uIDList = Collections.synchronizedList(new ArrayList< >());
-    workers = Collections.synchronizedList(new ArrayList< >());
-    cluster = Collections.synchronizedList(new ArrayList< >());
-    dbList = Collections.synchronizedList(new ArrayList< >());
+    uIDList = Collections.synchronizedList(new ArrayList<>());
+    workers = Collections.synchronizedList(new ArrayList<>());
+    cluster = Collections.synchronizedList(new ArrayList<>());
+    dbList = Collections.synchronizedList(new ArrayList<>());
     charsets = new ConcurrentHashMap<>();
     dbWorker = new ConcurrentHashMap<>();
     dbCommit = new ConcurrentHashMap<>();
@@ -35,7 +35,7 @@ public class ODBManager implements ODBEventListening {
     kOwner = new ConcurrentHashMap<>();
     nodes = new ConcurrentHashMap<>();
     // try to setup dbAgent in all nodes
-    ForkJoinPool.commonPool().execute(()->{      
+    ForkJoinPool.commonPool().execute(()->{
       for (String node:parms.nodeList) try {
         ODBCluster odbc = new ODBCluster(node);
         nodes.put(node, odbc);

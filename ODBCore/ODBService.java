@@ -34,8 +34,8 @@ public class ODBService {
     parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
     if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
     else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
-    parms.nodeList = Collections.synchronizedList(new ArrayList< >());
-    parms.remList = Collections.synchronizedList(new ArrayList< >());
+    parms.nodeList = Collections.synchronizedList(new ArrayList<>());
+    parms.remList = Collections.synchronizedList(new ArrayList<>());
     // load cluster nodes
     for (int i = 1; ; ++i) {
       String node = map.get("NODE_"+i);
@@ -54,8 +54,8 @@ public class ODBService {
     pool = Executors.newFixedThreadPool(8);
     pool.execute(parms.listener);
     pool.execute(parms.BC);
-    // Start JODB server for listening
-    pool.execute(() -> {
+    // Start ODB server
+    pool.execute(()->{
       try {
         dbSvr = ServerSocketChannel.open();
         dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(parms.primary)));
@@ -63,7 +63,7 @@ public class ODBService {
         while (parms.loop) (new ODBWorker(dbSvr.accept(), parms)).start();
       } catch (Exception e) { }
       if (parms.loop) { // something wrong with dbSvr: hostName  Port?
-        System.err.println("Cannot start JODB. Pls. check "+parms.webHostName);
+        System.err.println("Cannot start ODB Server. Pls. check: "+parms.webHostName);
         System.exit(0);
       }
     });
@@ -252,10 +252,7 @@ public class ODBService {
       parms.odMgr.shutdown( );
       parms.loop = false;
       dbSvr.close();
-      if (parms.logger != null) {
-        parms.logger.write(("ODBService is down."+System.lineSeparator()).getBytes());
-        parms.logger.close();
-      }
+      parms.logging("ODBService is down."+System.lineSeparator());
       if (!parms.log) (new File(logName)).delete();
       parms.listener.exit(); // stop Listener
       parms.BC.exit(); // stop ODBBroadcaster
