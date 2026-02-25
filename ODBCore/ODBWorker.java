@@ -34,27 +34,29 @@ public class ODBWorker extends Thread {
       soc.socket().setReceiveBufferSize(65536);
     } catch (Exception ex) { }
     //
-    String key;
+    byte[] bb;
+    int cmd, le;
     ODBInputStream ois;
     ArrayList<String> kLst;
+    String key, dbName, charset;
     ODBManager odMgr = parms.odMgr;
     ODBIOStream ios = new ODBIOStream();
     ODBObjectView oov = new ODBObjectView();
+    ArrayList<byte[]> aLst = new ArrayList<>();
     ArrayList<String> notify = new ArrayList<>();
     // loop until JODB server exits
     while (parms.loop) {
       try {
         ios.read(soc); // read the content from soc to ios
         ois = new ODBInputStream(ios.toByteArray());
-        //
-        int cmd = ois.read(); // Access Command
-        String dbName = ois.readToken( );
+        cmd = ois.read(); // Access Command
+        dbName = ois.readToken( );
         if (dbName.charAt(0) == '+') {
-          int le = dbName.indexOf("|")+1;
+          le = dbName.indexOf("|")+1;
           uID = dbName.substring(0, le);
           dbName = dbName.substring(le);
         }
-        String charset = odMgr.getCharset(dbName);
+        charset = odMgr.getCharset(dbName);
         if (charset != null) {
           oov.setCharset(charset);
           ios.setCharset(charset);
@@ -256,7 +258,6 @@ public class ODBWorker extends Thread {
           break;
         case 22: // commit
           if (odMgr.isAutoCommit(uID)) break;
-          //
           key = ois.readToken( );
           if (odMgr.isLocked(uID, dbName, key)) {
             ios.writeBool(odMgr.restoreKey(uID, dbName, key, true));
@@ -286,8 +287,7 @@ public class ODBWorker extends Thread {
         case 26: // set autoCommit ODBConnect
         case 27: // reset autoCommit ODBConnect
           odMgr.autoCommit(uID, cmd == 26);
-          if (uID.charAt(0) != '+') 
-            parms.logging("autoCommit("+(cmd == 26?"true":"false")+") set by "+uID);
+          if (uID.charAt(0) != '+') parms.logging("autoCommit("+(cmd == 26?"true":"false")+") set by "+uID);
           ios.writeBool(cmd == 26);
           break;
         case 28: // isKeyFree
@@ -333,28 +333,27 @@ public class ODBWorker extends Thread {
           ios.writeList(cLst);
           break;
        case 33: // allObjects(String dbName, String clsName)
+          aLst.clear();
           key = ois.readToken( ); // class name
           kLst = odMgr.getKeys(uID, dbName);
-          ArrayList<byte[]> bLst = new ArrayList<>();
           for (String k : kLst) {
-            byte[] obj = odMgr.read(uID, dbName, k);
-            oov.view(obj); // load the content for view
-            if (oov.getClassName().equals(key)) bLst.add(obj);
+            bb = odMgr.read(uID, dbName, k);
+            oov.view(bb); // load the content for view
+            if (oov.getClassName().equals(key)) aLst.add(bb);
           }
-          ios.writeObjList(bLst);
+          ios.writeObjList(aLst);
           break; 
         case 34: // selectAll(String dbName, String vName, String pat)
+          aLst.clear();
           key = ois.readToken(); // vName
-          ArrayList<byte[]> sLst = new ArrayList<>();
           String pat = charset != null? new String(ois.readBytes(), charset):new String(ois.readBytes());
           kLst = odMgr.getKeys(uID, dbName);
           for (String k : kLst) {
-            byte[] obj = odMgr.read(uID, dbName, k);
-            if (oov.viewVar(obj, key, "EQ", pat)) sLst.add(obj);             
+            bb = odMgr.read(uID, dbName, k);
+            if (oov.viewVar(bb, key, "EQ", pat)) aLst.add(bb);             
           }
-          ios.writeObjList(sLst);
-          if (uID.charAt(0) != '+')
-            parms.logging("select("+dbName+","+key+","+pat+") by "+uID);
+          ios.writeObjList(aLst);
+          if (uID.charAt(0) != '+') parms.logging("select("+dbName+","+key+","+pat+") by "+uID);
           break;
         case 35: // SQL(String dbName, String sql)
           /*
@@ -362,14 +361,14 @@ public class ODBWorker extends Thread {
             0      1    2  3     4   5     6  7     8  9     10 11    ...
            select var_1 eq val_1 and var_2 gt val_2 or var_3 le val_3 ...
           */
-          String sql = ois.readToken();
+          aLst.clear();
+          key = ois.readToken(); // sql
           kLst = odMgr.getKeys(uID, dbName);
-          ArrayList<byte[]> qLst = new ArrayList<>();
-          String tmp[] = ODBParser.split(sql, " "); // faster than regular expressions
-          //String tmp[] = sql.trim().split("[ ]+"); // ignore space and discard ""
+          String tmp[] = ODBParser.split(key, " "); // faster than regular expressions
+          //String tmp[] = key.trim().split("[ ]+"); // ignore space and discard ""
           try {
             for (String k : kLst) {
-              byte[] bb = odMgr.read(uID, dbName, k);
+              bb = odMgr.read(uID, dbName, k);
               boolean OK = oov.viewVar(bb, tmp[1], tmp[2], tmp[3]);
               for (int i = 4; i < tmp.length; i += 4) { // evaluation from left to right
                if ("or".equalsIgnoreCase(tmp[i])) {
@@ -378,28 +377,26 @@ public class ODBWorker extends Thread {
                   OK = OK && oov.viewVar(null, tmp[i+1], tmp[i+2], tmp[i+3]);
                 }
               }
-              if (OK) qLst.add(bb);
+              if (OK) aLst.add(bb);
             }
           } catch (Exception es) {
-            qLst.clear();
+            aLst.clear();
           }
-          ios.writeObjList(qLst);
-          if (uID.charAt(0) != '+')
-            parms.logging("sql("+dbName+","+sql+") by "+uID);
+          ios.writeObjList(aLst);
+          if (uID.charAt(0) != '+') parms.logging("sql("+dbName+","+key+") by "+uID);
           break;
         case 36: // selectAll(vName, "GT", 123456) or selectAll(vName, "GT", 123.456)
+          aLst.clear();
           key = ois.readToken();
           kLst = odMgr.getKeys(uID, dbName);
-          ArrayList<byte[]> aLst = new ArrayList<>();
           String sa = charset != null? new String(ois.readBytes(), charset):new String(ois.readBytes());
           //String[] val = sa.split(""+(char)0x00);
           String[] val = ODBParser.split(sa, ""+(char)0x00);
           for (String k : kLst) {
-            byte[] ba = odMgr.read(uID, dbName, k);
-            if (oov.viewVar(ba, key, val[0], val[1])) aLst.add(ba);
+            bb = odMgr.read(uID, dbName, k);
+            if (oov.viewVar(bb, key, val[0], val[1])) aLst.add(bb);
           }
-          if (uID.charAt(0) != '+') 
-            parms.logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
+          if (uID.charAt(0) != '+') parms.logging("select("+dbName+","+key+" "+val[0]+" "+val[1]+") by "+uID);
           ios.writeObjList(aLst);
           break;
         case 37: // getClassName(dbName, key)
@@ -407,10 +404,10 @@ public class ODBWorker extends Thread {
           ios.writeMsg(oov.getClassName());
           break;
         case 38: // allObjects(dbName)
+          aLst.clear();
           kLst = odMgr.getKeys(uID, dbName);
-          ArrayList<byte[]> fLst = new ArrayList<>();
-          for (String k:kLst) fLst.add(odMgr.read(uID, dbName, k));
-          ios.writeObjList(fLst);
+          for (String k:kLst) aLst.add(odMgr.read(uID, dbName, k));
+          ios.writeObjList(aLst);
           break;
         case 39: // notify(dbName, enabled) add/delete/update notify
           boolean enabled = ois.readToken().charAt(0) == '1';

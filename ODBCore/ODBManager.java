@@ -57,8 +57,8 @@ public class ODBManager implements ODBEventListening {
   @param event ODBEvent
   */
   public void odbEvent(final ODBEvent event) {
-    String node = event.getActiveNode();
     int type = event.getEventType();
+    String node = event.getActiveNode();
     if (type == 13 || node.equals(parms.webHostName)) return;
     // 0: node down, 7: removeNode, 8: detachedNode
     if (type == 0 || type == 7 || type == 8) {
@@ -617,6 +617,7 @@ public class ODBManager implements ODBEventListening {
   public void shutdown( ) throws Exception {
     // broadcast this webHostName node is down
     parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
+    Thread.sleep(200); // wait 200 mSec.
     for (String uID:uIDList) {
       for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
       removeAgent(uID);
