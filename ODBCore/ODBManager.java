@@ -617,13 +617,13 @@ public class ODBManager implements ODBEventListening {
   public void shutdown( ) throws Exception {
     // broadcast this webHostName node is down
     parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
-    Thread.sleep(200); // wait 200 mSec.
     for (String uID:uIDList) {
       for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
       removeAgent(uID);
     }
     // close all active workers on this node
     for (ODBWorker w:workers) w.exit();
+    TimeUnit.MICROSECONDS.sleep(100);
   }
   /**
   remove a node from cluster

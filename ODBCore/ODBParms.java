@@ -17,7 +17,7 @@ public class ODBParms {
   @param msg, String -message to be logged
   */
   public void logging(String msg) {
-    if (log) synchronized(logger) {
+    synchronized(logger) {
       try {
         logger.write((msg+System.lineSeparator()).getBytes());
         logger.flush();

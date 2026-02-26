@@ -108,7 +108,7 @@ public class ODBService {
   */
   public long ping(String node) {
     try {
-      String[] ip = ODBParser.split(node, ":");
+      String[] ip = node.split(":");
       if (ip.length == 2) {
         SocketChannel soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
         ByteBuffer buf = ByteBuffer.allocate(32);
@@ -252,8 +252,8 @@ public class ODBService {
       parms.odMgr.shutdown( );
       parms.loop = false;
       dbSvr.close();
-      parms.logging("ODBService is down."+System.lineSeparator());
-      if (!parms.log) (new File(logName)).delete();
+      if (parms.log) parms.logging("ODBService is down."+System.lineSeparator());
+      else (new File(logName)).delete();
       parms.listener.exit(); // stop Listener
       parms.BC.exit(); // stop ODBBroadcaster
     } catch (Exception ex) { }
