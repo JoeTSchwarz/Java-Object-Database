@@ -2,9 +2,11 @@ import joeapp.odb.*;
 // @author Joe T. Schwarz (c)
 public class CreateOODBMember {
   public static void main(String... args) {
-    try {
-      ODBConnect dbcon = new ODBConnect("localhost", 9999, "tester", "test");
-      System.out.println("Connected to localhost:9999");
+    int z = 0;
+    while (z < 2) try {
+      int port = z == 0? 9999:8888;
+      ODBConnect dbcon = new ODBConnect("192.168.0.70", port, "tester", "test");
+      System.out.println("Connected to 192.168.0.70:"+port);
       dbcon.connect(dbName); // create if needed
       dbcon.autoCommit(true);
       String[] cities = { "San Diego", "New York", "Tampa", "New Orlean",
@@ -67,14 +69,16 @@ public class CreateOODBMember {
       dbcon.close(dbName);
       dbcon.disconnect();
       java.util.concurrent.TimeUnit.SECONDS.sleep(1);
-      dbcon = new ODBConnect("localhost", 9999, "tester", "test");
-      System.out.println("Reconnected to localhost:9999");
+      dbcon = new ODBConnect("192.168.0.70", port, "tester", "test");
+      System.out.println("Reconnected to 192.168.0.70:"+port);
       dbcon.connect(dbName); // create if needed
       System.out.println("Number of Members:"+dbcon.getKeys(dbName).size());
       dbcon.close(dbName);
       dbcon.disconnect();
+      ++z;
     } catch (Exception ex) {
       ex.printStackTrace();
+      break;
     }
     System.exit(0);
   }
