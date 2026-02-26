@@ -41,8 +41,9 @@ public class ODBManager implements ODBEventListening {
         nodes.put(node, odbc);
         cluster.add(odbc);
       } catch (Exception e) { }
+      parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
     });
-    parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
+    //parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
   }
   // ODBEventListening Implementation
   // Check only for 
