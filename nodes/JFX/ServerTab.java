@@ -135,10 +135,10 @@ public class ServerTab implements Initializable, ODBEventListening {
         registered = false;
         odbService = null;
       }
-      if (odbService == null) {
-        Platform.exit();
-        System.exit(0);
-      }
+    }
+    if (odbService == null) {
+      Platform.exit();
+      System.exit(0);
     }
   }
   // implement the ODBEvent-----------------------------------------------------
