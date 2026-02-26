@@ -429,15 +429,15 @@ public class JOptions {
     right.anchor = GridBagConstraints.WEST;
     right.gridwidth = GridBagConstraints.REMAINDER;
     
-    layout.setConstraints(jid, left);
-    pan.add(jid);
-    layout.setConstraints(uID, right);
-    pan.add(uID);
-    
     layout.setConstraints(emp, left);
     pan.add(emp);
     layout.setConstraints(cb, right);
     pan.add(cb);
+    
+    layout.setConstraints(jid, left);
+    pan.add(jid);
+    layout.setConstraints(uID, right);
+    pan.add(uID);
     
     layout.setConstraints(jpw, left);
     pan.add(jpw);
