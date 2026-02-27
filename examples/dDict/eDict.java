@@ -174,7 +174,6 @@ public class eDict extends Application implements ODBEventListening {
     stage.setResizable(false);
     stage.setScene(scene);
     stage.show();
-    This = this;
   }
   // implement the ODBEvent-----------------------------------------------------
   // only check for:
@@ -188,10 +187,13 @@ public class eDict extends Application implements ODBEventListening {
   // 11: user add/delete/update (only if ODBConnect.notify(dbName) is set)
   public void odbEvent(ODBEvent event) {
     Platform.runLater(() -> {
-      String node = event.getActiveNode();
       int type = event.getEventType();
+      String node = event.getActiveNode();
       String msg = event.getMessage();
-      if (type == 0) {
+      switch (type) {
+        case 9: // forcedClose
+        if (!msg.equals(dict.odb)) return;
+        case 0: // down
         if (host_port.equals(node)) {
           Alert alert = new Alert(AlertType.CONFIRMATION);
           addCSS(alert);
@@ -210,29 +212,32 @@ public class eDict extends Application implements ODBEventListening {
             alert.showAndWait();
             exit();
           }
-          // must be This
-          dict.register(This);
+          dict.register(this);
           host_port = dict.getActiveNode();
-          if (type != 0) txtArea.setText("On "+node+": "+msg+" was forced to close.\n");
+          if (type == 0) txtArea.setText(node+" is down.\n");
+          else txtArea.setText("On "+node+": "+msg+" was forced to close.\n");
           txtArea.appendText("Switch to "+host_port+"\nKeyList AutoRefresh.\n");
         }
-        refresh(node+" is down.");
-      } else if (type == 2) {
-        refresh(msg+" is online.");
-      } else if (type == 4) { // forcedFreeKey/, etc.
+        case 5: // removeNode internal
+        refresh(node+" is down or removed from Cluster.");
+        return;
+        case 2:
+          refresh(msg+" is online.");
+          return;
+        case 4: // forcedFreeKey/, etc.
         txtArea.setText("On local "+node+": "+msg+"\n");
-      } else if (type == 7 && !host_port.equals(node)) { // addNode or removeNode
-        refresh(node+" is removed from cluster.");
-      } else if (type == 9 && msg.equals(dict.odb)) { // forcedClose
-        refresh(msg+" on "+node+" is forced to close by Superuser.");
-      } else if (type == 10) { // addNode/joinNode
+        return;
+        case 7: // removeNode superUser
+        if (!host_port.equals(node)) refresh(node+" is removed from cluster.");
+        return;
+        case 6:  // addNode
+        case 10: // joinNode
         refresh(msg+" joins Cluster.");
-      } else if (type == 11) { // user add/delete/update
+        return;
+        case 11: // user add/delete/update
         int p = node.indexOf("|"); // uID|dbName
-        if (p < 0) return;
-        if (!dict.getUserID().equals(node.substring(0, p)) && dict.odb.equals(node.substring(p+1))) {
-          refresh(msg);
-        }
+        if (p > 0 && !dict.getUserID().equals(node.substring(0, p)) && dict.odb.equals(node.substring(p+1))) refresh(msg);
+        return;
       }
     });
   }
@@ -335,7 +340,6 @@ public class eDict extends Application implements ODBEventListening {
     System.exit(0);
   }
   //
-  private eDict This;
   private eOpenDict dict;
   private TextField trans;
   private TextArea txtArea;
