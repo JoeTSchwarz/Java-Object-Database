@@ -45,7 +45,7 @@ public class ODBWorker extends Thread {
     ArrayList<byte[]> aLst = new ArrayList<>();
     ArrayList<String> notify = new ArrayList<>();
     // loop until JODB server exits
-    while (parms.loop) {
+    while (true) {
       try {
         ios.read(soc); // read the content from soc to ios
         ois = new ODBInputStream(ios.toByteArray());

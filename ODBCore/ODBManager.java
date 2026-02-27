@@ -58,34 +58,25 @@ public class ODBManager implements ODBEventListening {
   @param event ODBEvent
   */
   public void odbEvent(final ODBEvent event) {
-    int type = event.getEventType();
     String node = event.getActiveNode();
-    if (type == 13 || node.equals(parms.webHostName)) return;
-    // 0: node down, 7: removeNode, 8: detachedNode
-    if (type == 0 || type == 7 || type == 8) {
+    if (node.equals(parms.webHostName)) return;
+    switch(event.getEventType()) {
+    case 0: // node down
+    case 7: // removeNode
+    case 8: // detachedNode
       removeNode(node);
-      parms.remList.add(node);
-      parms.nodeList.remove(node);
+    case 5:  // removeNode's Agents
       List<String> uLst = new ArrayList<String>(dbOwner.keySet());
       for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
       else if (node.equals(parms.webHostName)) parms.BC.broadcast(8, node, parms.nodeList);
       return;
-    }
-    // 1: node up, 6: addNode
-    if (type == 1 || type == 6) {
-      try {
-        if (joinNode(node)) {
-          parms.BC.broadcast(2, node, parms.nodeList); // is ready
-          nodes.get(node).joinNode(parms.webHostName, node); // node as owner
-        } else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
-      } catch (Exception ex) { }
+    case 1: // node up,
+    case 6: // addNode
+     if (joinNode(node)) {
+        parms.BC.broadcast(2, node, parms.nodeList); // is ready
+        nodes.get(node).joinNode(parms.webHostName, node); // node as owner
+      } else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
       return;
-    }
-    if (type == 5) try { // removeNode's Agents
-      List<String> uLst = new ArrayList<String>(dbOwner.keySet());
-      for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
-    } catch (Exception e) {
-      parms.BC.broadcast(3, node, Arrays.asList("Failed to remove Agents on "+node));
     }
   }
   /**
@@ -612,38 +603,22 @@ public class ODBManager implements ODBEventListening {
    return false;
   }
   /**
-  shutdown() closes ALL open db and Agents
-  @exception Exception thrown by JAVA
-  */
-  public void shutdown( ) throws Exception {
-    // broadcast this webHostName node is down
-    parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
-    for (String uID:uIDList) {
-      for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
-      removeAgent(uID);
-    }
-    // close all active workers on this node
-    for (ODBWorker w:workers) w.exit();
-    TimeUnit.MICROSECONDS.sleep(100);
-  }
-  /**
   remove a node from cluster
   @param node String with the format HostName:Port or HostIP:Port
   */
   public void removeNode(String node) {
-    ForkJoinPool.commonPool().execute(() -> {
-      ODBCluster odbc = nodes.remove(node);
-      if (odbc == null) return; // unknown node
-      // remove all agents TO this node on Cluster
-      List<String> uLst = new ArrayList<String>(dbOwner.keySet());
-      for (String uID:uLst) if (uID.charAt(0) != '+') odbc.removeClient("+"+uID+"|");
-      cluster.remove(odbc); // remove odbc from cluster
-      odbc.disconnect(); // disconnect and broadcast Message
-      //
-      nodes.remove(node); // remove this node
-      parms.nodeList.remove(node); // remove this node
-      parms.BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
-    });
+    ODBCluster odbc = nodes.remove(node);
+    if (odbc == null) return; // unknown node
+    // remove all agents TO this node on Cluster
+    List<String> uLst = new ArrayList<String>(dbOwner.keySet());
+    for (String uID:uLst) if (uID.charAt(0) != '+') odbc.removeClient("+"+uID+"|");
+    cluster.remove(odbc); // remove odbc from cluster
+    odbc.disconnect(); // disconnect and broadcast Message
+    //
+    nodes.remove(node);
+    parms.remList.add(node);
+    parms.nodeList.remove(node);
+    parms.BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
   }
   /**
   joinNode
@@ -655,13 +630,14 @@ public class ODBManager implements ODBEventListening {
       cluster.remove(nodes.get(node));
       ODBCluster odbc = new ODBCluster(node);
       cluster.add(odbc);  // new cluster (instance)
+      parms.nodeList.add(node);
+      parms.remList.remove(node);
       nodes.put(node, odbc); // reload the opened ODBs
       if (dbList.size() > 0) {
         List<String> uList = new ArrayList<String>(dbOwner.keySet());
         for (String dbName:dbList) for (String uID:uList)  // attach to DBs
         if (uID.charAt(0) != '+') odbc.connect("+"+uID+"|"+dbName, charsets.get(dbName));
       }
-      parms.nodeList.add(node);
       return true;
     } catch (Exception ex) { }
     return false;
@@ -757,6 +733,19 @@ public class ODBManager implements ODBEventListening {
       onActive(uID, dbName);
     }
     return true;
+  }
+  /**
+  shutdown() closes ALL open db and Agents
+  @exception Exception thrown by JAVA
+  */
+  public void shutdown( ) throws Exception {
+    // broadcast this webHostName node is down
+    parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
+    for (String uID:uIDList) {
+      for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
+      removeAgent(uID);
+    }
+    for (ODBWorker w:workers) w.exit();
   }
   //
   private void onActive(String uID, String dbName) {

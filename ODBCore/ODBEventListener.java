@@ -31,7 +31,7 @@ public class ODBEventListener implements Runnable {
   @param host_port string containing MultiCast IP and port. Example 224.0.0.3:9990
   */
   public ODBEventListener(String host_port) {
-    this.host_port = host_port;
+    ip = ODBParser.split(host_port, ":");
   }
   /**
   @param odbe an implemented ODBListening object
@@ -54,29 +54,19 @@ public class ODBEventListener implements Runnable {
   }
   //
   public void run() {
-    boolean running = false;
     try {
-      String[] ip = ODBParser.split(host_port, ":");
       mcs = new MulticastSocket(Integer.parseInt(ip[1]));
       mcs.joinGroup(InetAddress.getByName(ip[0]));
-      running = true;
       while (true) {
-        DatagramPacket packet = new DatagramPacket(new byte[256], 256);
+        DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
         mcs.receive(packet); // wait for the incoming msg
-        pool.submit(() -> {
-          ODBEvent event = new ODBEvent(packet);
-          for (ODBEventListening odbe : set) odbe.odbEvent(event);
-        });
+        ODBEvent event = new ODBEvent(packet);
+        for (ODBEventListening odbe : set) odbe.odbEvent(event);
       }
     } catch (Exception ex) { }
-    if (!running) {
-      System.err.println("Unable to start ODBBroadcaster:"+host_port);
-      System.exit(0);
-    }
-    pool.shutdownNow();
+    exit();
   }
-  private String host_port;
+  private String ip[];
   private MulticastSocket mcs;
-  private ExecutorService pool = Executors.newCachedThreadPool();
   private volatile Set<ODBEventListening> set = new CopyOnWriteArraySet<ODBEventListening>( );
 }

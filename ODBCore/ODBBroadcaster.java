@@ -31,14 +31,14 @@ public class ODBBroadcaster implements Runnable {
   @param host_port string, HostName:Port or HostIP:Port
   */
   public ODBBroadcaster(String host_port) {
-    this.host_port = host_port;
+    ip = ODBParser.split(host_port, ":");
   }
   /**
   customized message Broadcasting
   @param msg String, message
   */
   public void broadcast(String msg) {
-    msgLst.add(((char)0x0D+msg).getBytes( ));
+    msgLst.add((char)0x0D+msg);
   }
   /**
   ODB internal message broadcasting
@@ -47,10 +47,11 @@ public class ODBBroadcaster implements Runnable {
   @param nodes String, arrayList of nodes on cluster
   */
   public void broadcast(int cmd, String msg, List<String> nodes) {
-    StringBuilder sb = new StringBuilder((char)(cmd & 0xFF)+msg+(char)0x01);
-    if (nodes.size() > 0) for (String node:nodes) sb.append(node+(char)0x01);
-    else sb.append("*"+(char)0x01); // dummy node
-    msgLst.add(sb.toString().getBytes( ));
+    if (nodes.size() > 0) {
+      StringBuilder sb = new StringBuilder((char)(cmd & 0xFF)+msg+(char)0x01);
+      for (String node:nodes) sb.append(node+(char)0x01);
+      msgLst.add(sb.toString());
+    } else msgLst.add((char)(cmd & 0xFF)+msg+(char)0x01+"*"+(char)0x01);
   }
   // called by ODBService
   public void exit() {
@@ -60,28 +61,20 @@ public class ODBBroadcaster implements Runnable {
     } catch (Exception ex) { }
   }
   public void run( ) {
-    boolean running = false;
     try {
-      String[] ip = ODBParser.split(host_port, ":");
       int port = Integer.parseInt(ip[1]);
       mcs = new MulticastSocket(port);
       InetAddress group = InetAddress.getByName(ip[0]);
-      running = true;
       while (true) {
         while (msgLst.size() > 0) {
-          byte[] msg = msgLst.remove(0);
+          byte[] msg = (msgLst.remove(0)).getBytes();
           mcs.send(new DatagramPacket(msg, msg.length, group, port));
         }
-        // pause 50 microsecond or 100 microSeconds
-        java.util.concurrent.TimeUnit.MICROSECONDS.sleep(50);
       }
     } catch (Exception ex) { }
-    if (!running) {
-      System.err.println("Unable to start ODBBroadcaster:"+host_port);
-      System.exit(0);
-    }
+    exit();
   }
-  private String host_port;
+  private String ip[];
   private MulticastSocket mcs;
-  private volatile List<byte[]> msgLst = Collections.synchronizedList(new ArrayList<byte[]>());
+  private volatile List<String> msgLst = Collections.synchronizedList(new ArrayList<String>());
 }
