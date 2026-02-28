@@ -232,7 +232,6 @@ public class eDict extends Application implements ODBEventListening {
         if (!host_port.equals(node)) refresh(node+" is removed from cluster.");
         return;
         case 6:  // addNode
-        case 10: // joinNode
         refresh(msg+" joins Cluster.");
         return;
         case 11: // user add/delete/update
