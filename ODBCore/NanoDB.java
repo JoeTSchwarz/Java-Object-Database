@@ -9,10 +9,10 @@ import java.nio.charset.Charset;
 import java.nio.channels.FileLock;
 /**
 Nano Database. Instantiated and maintained by ODBManager
-<br>ODB consists of 2 areas: key area and record area
+<br>ODB consists of 2 areas: key area and data area
 <br>- Key area has 3 fields: KeyLength, record length, key itself
 <br>- Data area contains the records which can be serialized object or String
-<br>- Data must be committed before closed or saved. Otherwise data will be lost.
+<br>- Records must be committed before closed or saved. Otherwise data will be lost.
 @author Joe T. Schwarz (c)
 */
 public class NanoDB {
@@ -52,7 +52,7 @@ public class NanoDB {
   getKeys() returns an ArrayList of all ODB keys
   @return ArrayList of strings (as keys) or an empty arraylist if NanoDB must be created
   */
-  public ArrayList<String> getKeys() {
+  public synchronized ArrayList<String> getKeys() {
     return new ArrayList<>(keysList);
   }
   /**
@@ -60,7 +60,7 @@ public class NanoDB {
   @param key String key
   @return boolean true if querried key exists (deleted keys won't count)
   */
-  public boolean isExisted(String key) {
+  public synchronized boolean isExisted(String key) {
     return keysList.contains(key) && !oCache.containsKey(key);
   }
   /**
@@ -68,7 +68,7 @@ public class NanoDB {
   @param key String key
   @return boolean true if querried key is deleted
   */
-  public boolean isKeyDeleted(String key) {
+  public synchronized boolean isKeyDeleted(String key) {
     return oCache.containsKey(key) && !keysList.contains(key);
   }
   /**
@@ -78,7 +78,7 @@ public class NanoDB {
   @exception Exception thrown by JAVA
   */
   // check for existed key is done by ODBManager
-  public byte[] readObject(String key) throws Exception {
+  public synchronized byte[] readObject(String key) throws Exception {
     if (cache.containsKey(key)) return cache.get(key);
     byte[] buf = new byte[sizes.get(key)];
     raf.seek(pointers.get(key));
@@ -92,17 +92,18 @@ public class NanoDB {
   @param buf byte array of a (non)serialized object in byte array
   */
   // check for existed key is done by ODBManager
-  public void addObject(String key, byte[] buf) {
+  public synchronized void addObject(String key, byte[] buf) {
     oCache.put(key, new byte[] {});
     cache.put(key, buf);
     keysList.add(key);
+    mod = true;
   }
   /**
   deleteObject
   @param key String
   @return boolean true if success
   */
-  public boolean deleteObject(String key) {
+  public synchronized boolean deleteObject(String key) {
     if (!oCache.containsKey(key)) try {
       if (cache.containsKey(key)) oCache.put(key, cache.remove(key));
       else {
@@ -112,6 +113,7 @@ public class NanoDB {
         oCache.put(key, buf);
       }
       keysList.remove(key);
+      mod = true;
       return true;
     } catch (Exception e) { }
     return false;
@@ -122,7 +124,7 @@ public class NanoDB {
   @param buf byte array of a (non)serialized object in byte array
   @return boolean true if success
   */
-  public boolean updateObject(String key, byte[] buf) {
+  public synchronized boolean updateObject(String key, byte[] buf) {
     if (!oCache.containsKey(key)) try {
       if (cache.containsKey(key)) oCache.put(key, cache.get(key));
       else {
@@ -132,6 +134,7 @@ public class NanoDB {
         oCache.put(key, bb);
       }
       cache.put(key, buf);
+      mod = true;
       return true;
     } catch (Exception ex) { }
     return false;
@@ -141,7 +144,7 @@ public class NanoDB {
   @param key String
   @return boolean true if successful
   */
-  public boolean commit(String key) {
+  public synchronized boolean commit(String key) {
     if (oCache.remove(key) == null) return false;
     committed = true;
     return true;
@@ -150,7 +153,7 @@ public class NanoDB {
   commit all transaction on this ODB
   @param keys String list of committing keys
   */
-  public void commit(List<String> keys) {
+  public synchronized void commit(List<String> keys) {
     int i = oCache.size();
     for (String key : keys) oCache.remove(key);
     if (i > oCache.size()) committed = true;
@@ -160,7 +163,7 @@ public class NanoDB {
   @param key String, key of object to be rollbacked
   @return boolean true if rollback is successful, false: unknown key, no rollback
   */
-  public boolean rollback(String key) {
+  public synchronized boolean rollback(String key) {
     if (oCache.size() == 0) return false;
     byte[] bb = oCache.remove(key);
     if (bb == null) return false;
@@ -178,29 +181,34 @@ public class NanoDB {
   rollback() rollbacks all the LAST modified/added actions
   @param kLst String arraylist of keys of object to be rollbacked
   */
-  public void rollback(List<String> kLst) {
+  public synchronized void rollback(List<String> kLst) {
     if (oCache.size() > 0) for (String key : kLst) rollback(key);
   }
   /**
   open NanoDB
   <br>If the specified fName from Constructor does not exist, it will be created with the fName.
   */
-  public void open() throws Exception {
+  public synchronized void open() throws Exception {
     if (raf != null) throw new Exception(fName+" is opened.");
-    cache.clear();
-    oCache.clear();
     keysList = Collections.synchronizedList(new ArrayList<String>(512));
     pointers = new ConcurrentHashMap<>(512);
+    oCache =  new ConcurrentHashMap<>(512);
+    cache = new ConcurrentHashMap<>(512);
     sizes = new ConcurrentHashMap<>(512);
     // load keysList, pointers and sizes
-    existed = (new File(fName)).exists();
     raf = new RandomAccessFile(fName, "rw");
+    existed = (new File(fName)).exists();
     fLocked = raf.getChannel().lock();
-    if (!existed) return; // new NanoDB
-    // cached only if size < 2MB (2097152)
-    cached = raf.length() < limit;
-    //
+    committed = false;
+    // new NanoDB ?
+    if (!existed) {
+      cached = false;
+      mod = true;
+      return;
+    }
+    mod = false;
     boolean full = false;
+    cached = raf.length() < limit;
     long pt  = (long)raf.readInt();
     byte[] all = new byte[(int)(pt - 4)];
     raf.read(all); // get the KeysList block
@@ -229,23 +237,20 @@ public class NanoDB {
   <br>If not autoCommit, all changes must be committed before close.
   <br>Otherwise all changes will be lost (empty NanoDB file if it must be created)
   */
-  public void close() {
-    try {
+  public synchronized void close() {
+    if (raf != null) try {
       save();
       fLocked.release();
       raf.close();
     } catch (Exception ex) { }
-    keysList.clear();
-    pointers.clear();
-    sizes.clear();
-    cache.clear();
     raf = null;
   }
   /**
   save NanoDB without close -see close()
   @exception Exception thrown by JAVA
   */
-  public void save() throws Exception {    
+  public synchronized void save() throws Exception {
+    if (raf == null) return;
     if (committed) {
       if (committed && oCache.size() > 0) { // recover the UNcommitted
         List<String> keys = new ArrayList<>(oCache.keySet());
@@ -263,7 +268,7 @@ public class NanoDB {
           }
         }
       }
-      if (cache.size() > 0) {
+      if (mod) { // modified content?
         ConcurrentHashMap<String, Long> pts = new ConcurrentHashMap<>(pointers.size());
         ConcurrentHashMap<String, Integer> szs = new ConcurrentHashMap<>(sizes.size());
         String tmp = String.format("%s_tmp", fName);
@@ -337,13 +342,14 @@ public class NanoDB {
     committed = false;
     existed = true;
     oCache.clear();
+    mod = false;
   }
   //---------------------------------------------------------------------------------------
-  private ConcurrentHashMap<String, byte[]> oCache =  new ConcurrentHashMap<>(256);
-  private ConcurrentHashMap<String, byte[]> cache = new ConcurrentHashMap<>(256);
-  private volatile boolean committed = false, existed = false, cached = false;
+  private volatile boolean committed, existed, cached, mod;
   private ConcurrentHashMap<String, Integer> sizes;
   private ConcurrentHashMap<String, Long> pointers;
+  private ConcurrentHashMap<String, byte[]> oCache;
+  private ConcurrentHashMap<String, byte[]> cache;
   private List<String> keysList;
   private RandomAccessFile raf;
   private int limit = 0x200000;
