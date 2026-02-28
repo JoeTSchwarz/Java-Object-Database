@@ -331,10 +331,19 @@ class ODBCluster {
   */
   protected boolean restoreKey(String dbName, String key, boolean mode) {
     try {
-      send(dbName, 97, key, ""+mode);
+      send(dbName, 96, key, ""+mode);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
+  }
+  /**
+  removeAgent, cmd: 97
+  @param uID String UserID
+  */
+  protected void removeAgent(String uID) {
+    try {
+      send(uID, 97);
+    } catch (Exception ex) { }
   }
   /**
   removeClient, cmd: 93

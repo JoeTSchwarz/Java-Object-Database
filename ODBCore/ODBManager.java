@@ -704,7 +704,7 @@ public class ODBManager implements ODBEventListening {
       for (String uid:uLst) removeAgent(uid);
       return true;
     }
-    if (uID.charAt(0) != '+') removeAgent("+"+uID+"|");
+    if (uID.charAt(0) != '+') for (ODBCluster odbc:cluster) odbc.removeAgent("+"+uID+"|");
     return removeAgent(uID);
   }
   /**

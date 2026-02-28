@@ -86,10 +86,9 @@ public class ODBWorker extends Thread {
           break;
         case 2: // disconnect ODBConnect
           try {
-            if (priv > 0) odMgr.removeClient(uID);
-            else odMgr.close(uID);
-            // free all bound dbAgents
+            odMgr.removeClient(uID);
             odMgr.unbindAgent("+"+uID+"|");
+            if (priv == 0) odMgr.close(uID);
             ios.write(soc);
           } catch (Exception ex) { }
           odMgr.uIDList.remove(uID);
@@ -395,12 +394,12 @@ public class ODBWorker extends Thread {
           parms.BC.broadcast(12, parms.webHostName, Arrays.asList(dbName));
           break;
         //----------------------------------SuperUser---------------------------
-        case 97: // restoreKey(dbName, key, mode)
+        case 96: // restoreKey(dbName, key, mode)
           key = ois.readToken( ); // key
           ios.writeBool(odMgr.restoreKey(uID, dbName, key, (new String(ois.readBytes())).equals("true")));
           break;
-        case 98: // removeClient - Cluster
-          odMgr.removeClient(uID);
+        case 98: // removeAgent - Cluster
+          odMgr.removeAgent(uID);
           break;
         case 99: // ping()
           soc.write(ByteBuffer.wrap((""+System.currentTimeMillis()).getBytes()));
