@@ -178,12 +178,12 @@ public class ServerTab implements Initializable, ODBEventListening {
           break;
         case 6:
           if (nodes.contains(node)) return;
-          nodes.add(node); // insert into PingNode
+          nodes.add(node); // insert into Node
           report.appendText(node+" is added to Cluster\n");
           break;
         case 7:
           if (!nodes.contains(node)) return;
-          nodes.remove(node); // remove from PingNode
+          nodes.remove(node); // remove from Node
           report.appendText(node+" is removed from Cluster\n");
           if (nodes.size() == 0) PingNode.setDisable(true);
           break;
