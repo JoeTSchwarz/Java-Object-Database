@@ -188,8 +188,8 @@ public class ODBWorker extends Thread {
           }
           if (priv > 0 || existed) {
             String cs = ois.readToken();
-            odMgr.connect(uID, dbName, cs); // setup dbAgents on cluster
-            if (!parms.remList.contains(parms.webHostName)) odMgr.bindAgent("+"+uID+"|"+dbName, cs);
+            odMgr.connect(uID, dbName, cs);
+            odMgr.bindAgent("+"+uID+"|"+dbName, cs);
             if (uID.charAt(0) != '+' && parms.log) parms.logging(dbName+" (charset:"+cs+") connected with "+uID);
           } else ios.writeErr(dbName+" does not exist. Or "+uid+" lacks of RW-Privilege.");
           break;
@@ -395,13 +395,9 @@ public class ODBWorker extends Thread {
           parms.BC.broadcast(12, parms.webHostName, Arrays.asList(dbName));
           break;
         //----------------------------------SuperUser---------------------------
-        case 96: // restoreKey(dbName, key, mode)
+        case 97: // restoreKey(dbName, key, mode)
           key = ois.readToken( ); // key
           ios.writeBool(odMgr.restoreKey(uID, dbName, key, (new String(ois.readBytes())).equals("true")));
-          break;
-        case 97: // joinNode - Cluster (invoked via ODBCluster)
-          odMgr.joinNode(dbName);
-          parms.BC.broadcast(10, dbName, Arrays.asList(ois.readToken( )));
           break;
         case 98: // removeClient - Cluster
           odMgr.removeClient(uID);

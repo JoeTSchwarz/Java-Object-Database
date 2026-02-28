@@ -34,16 +34,8 @@ public class ODBManager implements ODBEventListening {
     uIDList = Collections.synchronizedList(new ArrayList<>());
     workers = Collections.synchronizedList(new ArrayList<>());
     cluster = Collections.synchronizedList(new ArrayList<>());
-    // try to setup dbAgent in all nodes
-    ForkJoinPool.commonPool().execute(()->{
-      for (String node:parms.nodeList) try {
-        ODBCluster odbc = new ODBCluster(node);
-        nodes.put(node, odbc);
-        cluster.add(odbc);
-      } catch (Exception e) { }
-      parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
-    });
-    //parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
+    // broadcast Node is up and ready
+    parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -70,12 +62,11 @@ public class ODBManager implements ODBEventListening {
       for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
       else if (node.equals(parms.webHostName)) parms.BC.broadcast(8, node, parms.nodeList);
       return;
-    case 1: // node up,
+    case 1: // node up, me too is ready
+      parms.BC.broadcast(2, parms.webHostName, parms.nodeList);
     case 6: // addNode
-     if (joinNode(node)) {
-        parms.BC.broadcast(2, node, parms.nodeList); // is ready
-        nodes.get(node).joinNode(parms.webHostName, node); // node as owner
-      } else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
+      if (joinNode(node)) parms.BC.broadcast(2, node, parms.nodeList); // is ready
+      else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
       return;
     }
   }
@@ -616,7 +607,6 @@ public class ODBManager implements ODBEventListening {
     odbc.disconnect(); // disconnect and broadcast Message
     //
     nodes.remove(node);
-    parms.remList.add(node);
     parms.nodeList.remove(node);
     parms.BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
   }
@@ -631,7 +621,6 @@ public class ODBManager implements ODBEventListening {
       ODBCluster odbc = new ODBCluster(node);
       cluster.add(odbc);  // new cluster (instance)
       parms.nodeList.add(node);
-      parms.remList.remove(node);
       nodes.put(node, odbc); // reload the opened ODBs
       if (dbList.size() > 0) {
         List<String> uList = new ArrayList<String>(dbOwner.keySet());

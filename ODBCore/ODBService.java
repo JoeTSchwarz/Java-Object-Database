@@ -34,14 +34,6 @@ public class ODBService {
     parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
     if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
     else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
-    parms.nodeList = Collections.synchronizedList(new ArrayList<>());
-    parms.remList = Collections.synchronizedList(new ArrayList<>());
-    // load cluster nodes
-    for (int i = 1; ; ++i) {
-      String node = map.get("NODE_"+i);
-      if (node == null) break;
-      parms.nodeList.add(node.toLowerCase());
-    }
     parms.log = map.get("LOGGING").charAt(0) == '1';
     parms.userlist =  map.get("USERLIST");
     hostName = map.get("WEB_HOST/IP");
@@ -56,13 +48,15 @@ public class ODBService {
     pool.execute(parms.BC);
     // Start ODB server
     pool.execute(()->{
+      boolean ok = false;
       try {
         dbSvr = ServerSocketChannel.open();
         dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(parms.primary)));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
-        while (parms.loop) (new ODBWorker(dbSvr.accept(), parms)).start();
+        ok = true; // set OK
+        while (true) (new ODBWorker(dbSvr.accept(), parms)).start();
       } catch (Exception e) { }
-      if (parms.loop) { // something wrong with dbSvr: hostName  Port?
+      if (!ok) { // something wrong with dbSvr: hostName  Port?
         System.err.println("Cannot start ODB Server. Pls. check: "+parms.webHostName);
         System.exit(0);
       }
@@ -70,7 +64,7 @@ public class ODBService {
     parms.odMgr = new ODBManager(parms);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
-        if (parms.loop) shutdown( );
+        if (dbSvr != null) shutdown( );
       }
     });
   }
@@ -85,21 +79,20 @@ public class ODBService {
   */
   public ODBParms getODBParms() {
     return parms;
-  }
-  
-  /**
-  removeNode a node from the cluster ring
-  @param node String with the foemat HostName:Port or HostIP:Port
-  */
-  public void removeNode(String node) {
-    if (!parms.remList.contains(node)) parms.BC.broadcast(7, node, parms.nodeList);
-  }
+  } 
   /**
   addNode a new node to the cluster ring
   @param node String with the foemat HostName:Port or HostIP:Port
   */
   public void addNode(String node) {
-    if (parms.remList.contains(node)) parms.BC.broadcast(6, node, parms.nodeList);
+    if (!parms.nodeList.contains(node)) parms.BC.broadcast(6, node, parms.nodeList);
+  }
+  /**
+  removeNode a node from the cluster ring
+  @param node String with the foemat HostName:Port or HostIP:Port
+  */
+  public void removeNode(String node) {
+    if (parms.nodeList.contains(node)) parms.BC.broadcast(7, node, parms.nodeList);
   }
   /**
   ping a cluster node
@@ -250,7 +243,6 @@ public class ODBService {
   public void shutdown() {
     try {
       parms.odMgr.shutdown( );
-      parms.loop = false;
       dbSvr.close();
       if (parms.log) parms.logging("ODBService is down."+System.lineSeparator());
       else (new File(logName)).delete();

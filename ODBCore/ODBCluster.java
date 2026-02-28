@@ -225,14 +225,15 @@ class ODBCluster {
   @param cs String, Character set name.
   */
   protected void connect(String aID, String cs) {
-    if (!cList.contains(aID)) try {
+    //if (!cList.contains(aID)) try {
+    try {
       if (!charsets.containsKey(aID))try {
         charsets.put(aID, cs);
       } catch (Exception ex) {
         charsets.put(aID, "UTF-8");
         cs = "UTF-8";
       }
-      cList.add(aID);
+      //cList.add(aID);
       send(aID, 16, cs);
     } catch (Exception ex) { }
   }
@@ -330,19 +331,10 @@ class ODBCluster {
   */
   protected boolean restoreKey(String dbName, String key, boolean mode) {
     try {
-      send(dbName, 96, key, ""+mode);
+      send(dbName, 97, key, ""+mode);
       return ios.readBool();
     } catch (Exception ex) { }
     return false;
-  }
-  /**
-  joinNode, cmd: 97
-  @param node String node (hostname:port) to be added
-  */
-  protected void joinNode(String node, String owner) {
-    try {
-      send(node, 97, owner);
-   } catch (Exception ex) { }
   }
   /**
   removeClient, cmd: 93
@@ -395,7 +387,7 @@ class ODBCluster {
   // data area
   private SocketChannel soc;
   private ODBIOStream ios = new ODBIOStream();
-  private ArrayList<String> cList = new ArrayList<>();
+  //private ArrayList<String> cList = new ArrayList<>();
   private HashMap<String, String> charsets = new HashMap<>();
 
 }

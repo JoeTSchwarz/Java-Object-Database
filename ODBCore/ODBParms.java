@@ -12,7 +12,9 @@ public class ODBParms {
   /**
   Constructor. Global parameters of ODB
   */
-  public ODBParms( ) { }
+  public ODBParms( ) {
+    nodeList = Collections.synchronizedList(new ArrayList<>(128));
+  }
   /**
   @param msg, String -message to be logged
   */
@@ -31,8 +33,8 @@ public class ODBParms {
   public ODBManager odMgr;
   public ODBBroadcaster BC;
   public OutputStream logger;
+  public volatile boolean log;
+  public List<String> nodeList;
   public ODBEventListener listener;
-  public List<String> nodeList, remList;
-  public volatile boolean log, loop = true;
   public String db_path, broadcaster, primary, userlist, webHostName;
 }
