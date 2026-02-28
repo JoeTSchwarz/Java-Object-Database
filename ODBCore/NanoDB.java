@@ -200,6 +200,7 @@ public class NanoDB {
     // cached only if size < 2MB (2097152)
     cached = raf.length() < limit;
     //
+    boolean full = false;
     long pt  = (long)raf.readInt();
     byte[] all = new byte[(int)(pt - 4)];
     raf.read(all); // get the KeysList block
@@ -211,10 +212,11 @@ public class NanoDB {
            (((int)all[i+4] & 0xFF) * 0x100) | ((int)all[i+5] & 0xFF);
       // cache keysList and pointers and sizes
       String key = new String(all, i+6, kl, cs);
-      if (cached) { // cached
+      if (!full) { // fill cache
         byte[] bb = new byte[dl];
         raf.read(bb); // read
-        cache.put(key, bb);
+        if (raf.getFilePointer() < limit) cache.put(key, bb);
+        else full = true;
       }
       pointers.put(key, pt);
       sizes.put(key, dl);
@@ -277,9 +279,12 @@ public class NanoDB {
         RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
         FileLock fL = rTmp.getChannel().lock();
         // the key block
+        int kl, dl;
         for (String key : keysList) {
-          int kl = key.length();
-          int dl = cache.containsKey(key)? cache.get(key).length:sizes.get(key);
+          kl = key.length();
+          if (cache.containsKey(key)) dl = cache.get(key).length;
+          else dl = sizes.get(key);
+          //
           bao.write(new byte[] { (byte)(kl / 0x100),
                                  (byte) kl,
                                  (byte)(dl / 0x1000000),
@@ -315,7 +320,7 @@ public class NanoDB {
         }
         fL.release();
         rTmp.close();
-        if (existed && !cached) {
+        if (existed) {// && !cached) {
           fLocked.release();
           raf.close();
           File fi = new File(fName);
