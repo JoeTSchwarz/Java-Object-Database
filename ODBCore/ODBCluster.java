@@ -346,7 +346,7 @@ class ODBCluster {
     } catch (Exception ex) { }
   }
   /**
-  removeClient, cmd: 93
+  removeClient, cmd: 98
   @param uID String UserID
   */
   protected void removeClient(String uID) {
