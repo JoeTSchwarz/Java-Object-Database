@@ -22,6 +22,14 @@
 <MAX_CACHE_LIMIT> 2 />
 <LOGGING>0 />
 <!-------------------------------------------------------------------------------
+   Node Servers
+   Format: WEB_HOST/IP:Port
+   clustered Servers: omitted if no clustered servers
+   WEB_HOST/IP: see above.
+   Convention index: _1, _2, _3. ... for the Node No.1, No.2, No.3, ...
+!>
+<NODE_1>192.168.0.244:8888 />
+<!-------------------------------------------------------------------------------
   Messaging facility for the nodes using the Multicast IP
   The multicast datagram socket class is useful for sending and receiving IP multi-
   cast packets. A MulticastSocket is a (UDP) DatagramSocket, with additional capa-
