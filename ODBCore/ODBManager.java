@@ -20,7 +20,7 @@ public class ODBManager implements ODBEventListening {
   */
   public ODBManager(ODBParms parms) {
     this.parms = parms;
-    parms.odMgr = this;
+    parms.odbMgr = this;
     parms.listener.addListener(this);
     nodes = new ConcurrentHashMap<>();
     kOwner = new ConcurrentHashMap<>();
@@ -34,8 +34,15 @@ public class ODBManager implements ODBEventListening {
     uIDList = Collections.synchronizedList(new ArrayList<>());
     workers = Collections.synchronizedList(new ArrayList<>());
     cluster = Collections.synchronizedList(new ArrayList<>());
-    // broadcast Node is up and ready
-    parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
+    // try to setup dbAgent in all nodes
+    ForkJoinPool.commonPool().execute(()->{
+      for (String node:parms.nodeList) try {
+        ODBCluster odbc = new ODBCluster(node);
+        nodes.put(node, odbc);
+        cluster.add(odbc);
+      } catch (Exception e) { }
+      parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
+    });
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -104,6 +111,13 @@ public class ODBManager implements ODBEventListening {
   */
   public synchronized void bindAgent(String aID, String cSet) {
     for (ODBCluster odbc:cluster) odbc.connect(aID, cSet);
+  }
+  /**
+  unbindAgent() - unbind dbAgents. Invoked by ODBWorker-ODBConnect/disconnect
+  @param uID String
+  */
+  public synchronized void unbindAgent(String uID) {
+    for (ODBCluster odbc:cluster) odbc.removeAgent(uID);
   }
   /**
   autoCommit -set or reset autoCommit
@@ -595,9 +609,8 @@ public class ODBManager implements ODBEventListening {
     if (odbc == null) return; // unknown node
     // remove all agents TO this node on Cluster
     List<String> uLst = new ArrayList<String>(dbOwner.keySet());
-    for (String uID:uLst) if (uID.charAt(0) != '+') odbc.removeAgent("+"+uID+"|");
+    for (String uID:uLst) if (uID.charAt(0) != '+') odbc.disconnect("+"+uID+"|");
     cluster.remove(odbc); // remove odbc from cluster
-    odbc.disconnect(); // disconnect and broadcast Message
     //
     nodes.remove(node);
     parms.nodeList.remove(node);
@@ -725,7 +738,7 @@ public class ODBManager implements ODBEventListening {
     // broadcast this webHostName node is down
     parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
     for (String uID:uIDList) {
-      for (ODBCluster odbc:cluster) odbc.closeAgent("+"+uID+"|");
+      for (ODBCluster odbc:cluster) odbc.disconnect("+"+uID+"|");
       removeAgent(uID);
     }
     for (ODBWorker w:workers) w.exit();

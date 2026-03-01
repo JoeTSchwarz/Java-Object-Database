@@ -34,6 +34,12 @@ public class ODBService {
     parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
     if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
     else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
+    // load cluster nodes
+    for (int i = 1; ; ++i) {
+      String node = map.get("NODE_"+i);
+      if (node == null) break;
+      parms.nodeList.add(node.toLowerCase());
+    }
     parms.log = map.get("LOGGING").charAt(0) == '1';
     parms.userlist =  map.get("USERLIST");
     hostName = map.get("WEB_HOST/IP");
@@ -61,7 +67,7 @@ public class ODBService {
         System.exit(0);
       }
     });
-    parms.odMgr = new ODBManager(parms);
+    parms.odbMgr = new ODBManager(parms);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
         if (dbSvr != null) shutdown( );
@@ -128,7 +134,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedClose(String dbName) throws Exception {
-    boolean b = parms.odMgr.forcedClose(dbName);
+    boolean b = parms.odbMgr.forcedClose(dbName);
     if (b) parms.BC.broadcast(9, parms.webHostName,
                                  Arrays.asList(dbName+" is forced to close."));
     return b;
@@ -141,7 +147,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedFreeKey(String dbName, Object key) throws Exception {
-    boolean b = parms.odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), true);
+    boolean b = parms.odbMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), true);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to unlock."));
@@ -155,7 +161,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedRollbackKey(String dbName, Object key) throws Exception {
-    boolean b = parms.odMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), false);
+    boolean b = parms.odbMgr.restoreKey("*", dbName, ODBIOStream.odbKey(key), false);
     if (b) parms.BC.broadcast(4, 
                               parms.webHostName,
                               Arrays.asList(key+" of "+dbName+" is forced to rollback."));
@@ -168,7 +174,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedFreeKeys(String dbName) throws Exception {
-    boolean b = parms.odMgr.restoreKeys("*", dbName, true);
+    boolean b = parms.odbMgr.restoreKeys("*", dbName, true);
     if (b) parms.BC.broadcast(4, parms.webHostName,
                               Arrays.asList("All keys of "+dbName+" are forced to unlock."));
     return b;
@@ -180,7 +186,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public boolean forcedRollback(String dbName) throws Exception {
-    boolean b = parms.odMgr.restoreKeys("*", dbName, false);
+    boolean b = parms.odbMgr.restoreKeys("*", dbName, false);
     if (b) parms.BC.broadcast(4, parms.webHostName,
                               Arrays.asList("All keys of "+dbName+" are forced to rollback."));
     return b;
@@ -191,7 +197,7 @@ public class ODBService {
   @return boolean true if successful
   */
   public boolean removeClient(String uID) {
-    return parms.odMgr.removeClient(uID);
+    return parms.odbMgr.removeClient(uID);
   }
   /**
   register() to JODB's server for ODBEventListening
@@ -212,14 +218,14 @@ public class ODBService {
   @return List of DB names
   */
   public ArrayList<String> dbList() {
-    return parms.odMgr.dbList();
+    return parms.odbMgr.dbList();
   }
   /**
   activeClients returns a list of active DB userID
   @return List of userID
   */
   public ArrayList<String> activeClients() {
-    return parms.odMgr.activeClients();
+    return parms.odbMgr.activeClients();
   }
   /**
   activeUsers of active DB
@@ -227,7 +233,7 @@ public class ODBService {
   @return list of active users of this dbName
   */
   public ArrayList<String> activeWorkers(String dbName) {
-    return parms.odMgr.activeWorkers(dbName);
+    return parms.odbMgr.activeWorkers(dbName);
   }
   /**
   keyOwners
@@ -235,14 +241,14 @@ public class ODBService {
   @return List of user ID who owns the db keys (null if dbName is unknown)
   */
   public ArrayList<String> lockedKeyList(String dbName) {
-    return parms.odMgr.lockedKeyList("*", dbName);
+    return parms.odbMgr.lockedKeyList("*", dbName);
   }
   /**
   Grateful shutdown ODBServer
   */
   public void shutdown() {
     try {
-      parms.odMgr.shutdown( );
+      parms.odbMgr.shutdown( );
       dbSvr.close();
       if (parms.log) parms.logging("ODBService is down."+System.lineSeparator());
       else (new File(logName)).delete();
