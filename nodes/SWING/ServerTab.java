@@ -173,6 +173,7 @@ public class ServerTab implements ODBEventListening {
           bPing.addItem(node);
           return;
         case 2:
+        case 10:
           report.append(node+" is READY\n");
           nodes.add(node);
           return;
@@ -205,13 +206,6 @@ public class ServerTab implements ODBEventListening {
           return;
         case 9:
           report.append(node+": "+e.getMessage()+" was forced to close.\n");
-          return;
-        case 10: // reply from online server
-          if (!nodes.contains(node) && webHost.equals(e.getMessage())) {
-            report.append(node+" is ONLINE\n");
-            nodes.add(node);
-            bPing.addItem(node);
-          }
           return;
         case 12:
           report.append(e.getMessage());
