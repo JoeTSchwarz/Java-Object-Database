@@ -122,8 +122,8 @@ public class eOpenDict {
   public List<String> words;
   //
   private void sort(List<Object> lst) {
-    words = new ArrayList<>(lst.size());
     if (lst != null) {
+      words = new ArrayList<>(lst.size());
       for (Object obj : lst) words.add((String)obj);
       Collections.sort(words);
     }
