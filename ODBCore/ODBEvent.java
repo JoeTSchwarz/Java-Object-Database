@@ -20,10 +20,10 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 <br>7:  SuperUser, internal, removeNode invoked by ODBService. Format: 7, node, list&lt;alternative JODB&gt;
 <br>8:  SuperUser, internal, removeNode issued by ODBManage onEvent(). Format: 8, node, list&lt;alternative JODB&gt;
 <br>9:  SuperUser, forcedClose, invoked by ODBService. Format: 9, node, list&lt;message&gt;
-<br>10: SuperUser, internal, joinNode, invoked by ODBWorker. Format: 10, node, list&lt;message&gt;
+<br>10: ODBManager, received node replies to UP node
 <br>11: Notify add/delete/update. Format: 11, userID|dbName, list&lt;message&gt; 
 <br>12: Client sends msg to JODB. Format: 12, node, list&lt;message&gt; 
-<br>13: Customized message. Format: 13, message; 
+<br>13: Customized message. Format: 13, message;
 <br>rest is reserved for future use
 @author Joe T. Schwarz
 */
@@ -40,7 +40,9 @@ public class ODBEvent {
       nodes = null;
       node = null;
     } else {
-      nodes = ODBParser.split((new String(buf, 1, packet.getLength()-1)), ""+(char)0x01);
+      //nodes = ODBParser.split((new String(buf, 1, packet.getLength()-1)), ""+(char)0x01);
+      String msg = new String(buf, 1, packet.getLength()-1);
+      nodes = msg.split(""+(char)0x01);
       message = nodes[1];
       node = nodes[0];
     }

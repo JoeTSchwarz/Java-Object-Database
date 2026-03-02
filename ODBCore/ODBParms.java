@@ -18,19 +18,17 @@ public class ODBParms {
   /**
   @param msg, String -message to be logged
   */
-  public void logging(String msg) {
-    synchronized(logger) {
-      try {
-        logger.write((msg+System.lineSeparator()).getBytes());
-        logger.flush();
-      } catch (Exception ex) {
-        System.err.println("Unable to log: "+msg);
-      }
+  public synchronized void logging(String msg) {
+    try {
+      logger.write((msg+System.lineSeparator()).getBytes());
+      logger.flush();
+    } catch (Exception ex) {
+      System.err.println("Unable to log: "+msg);
     }
   }
   //
   public int limit;
-  public ODBManager odMgr;
+  public ODBManager odbMgr;
   public ODBBroadcaster BC;
   public OutputStream logger;
   public volatile boolean log;

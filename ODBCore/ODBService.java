@@ -31,15 +31,6 @@ public class ODBService {
               LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
               d, month, year, now.getHour(), now.getMinute(), now.getSecond());
     parms.logger = new BufferedOutputStream(new FileOutputStream(logName, false));
-    parms.limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT")) * 0x100000;
-    if (parms.limit > 0x40000000)  parms.limit = 0x40000000; // 1 GB
-    else if (parms.limit < 0x100000) parms.limit = 0x100000; // 1 MB
-    // load cluster nodes
-    for (int i = 1; ; ++i) {
-      String node = map.get("NODE_"+i);
-      if (node == null) break;
-      parms.nodeList.add(node.toLowerCase());
-    }
     parms.log = map.get("LOGGING").charAt(0) == '1';
     parms.userlist =  map.get("USERLIST");
     hostName = map.get("WEB_HOST/IP");
