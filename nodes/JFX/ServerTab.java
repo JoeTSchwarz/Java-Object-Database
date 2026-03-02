@@ -162,13 +162,14 @@ public class ServerTab implements Initializable, ODBEventListening {
           nodes.add(node);
           break;
         case 2:
+        case 10:
           report.appendText(node+" is READY\n");
           nodes.add(node);
-          return;
+          break;
         case 3:
           nodes.remove(node);
           report.appendText(node+" is UNKNOWN or UNAVAILABLE\n");
-          return;
+          break;
          case 4:
           report.appendText(node+": "+e.getMessage()+"\n");
           return;
@@ -190,12 +191,6 @@ public class ServerTab implements Initializable, ODBEventListening {
         case 9:
           report.appendText(node+": "+e.getMessage()+" was forced to close.\n");
           return;
-        case 10: // reply from online server
-          if (!nodes.contains(node) && webHost.equals(e.getMessage())) {
-            report.appendText(node+" is ONLINE\n");
-            nodes.add(node);
-          } else return;
-          break;
         case 12:
           report.appendText(e.getMessage());
           return;
