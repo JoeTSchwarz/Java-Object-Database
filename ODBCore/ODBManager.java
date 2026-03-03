@@ -16,12 +16,8 @@ Object Data Manager
 public class ODBManager implements ODBEventListening {
   /**
   contructor. ODBManager is responsible for the coomunication between ODBWorker/ODBCluster and NanoDB
-  @param parms ODBParms, JODB Object as a generic Parameter
   */
-  public ODBManager(ODBParms parms) {
-    this.parms = parms;
-    parms.odbMgr = this;
-    parms.listener.addListener(this);
+  public ODBManager( ) {
     nodes = new ConcurrentHashMap<>();
     kOwner = new ConcurrentHashMap<>();
     dbOwner = new ConcurrentHashMap<>();
@@ -34,8 +30,7 @@ public class ODBManager implements ODBEventListening {
     uIDList = Collections.synchronizedList(new ArrayList<>());
     workers = Collections.synchronizedList(new ArrayList<>());
     cluster = Collections.synchronizedList(new ArrayList<>());
-    // broadcast "node is online"
-    parms.BC.broadcast(1, parms.webHostName, parms.nodeList);
+    nodeList = Collections.synchronizedList(new ArrayList<>());
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -52,9 +47,8 @@ public class ODBManager implements ODBEventListening {
   */
   public synchronized void odbEvent(final ODBEvent event) {
     String node = event.getActiveNode();
-    if (node.equals(parms.webHostName)) return;
-    int type = event.getEventType();
-    switch(type) {
+    if (node.equals(webHostName)) return;
+    switch(event.getEventType()) {
     case 0: // node down
     case 7: // removeNode
     case 8: // detachedNode
@@ -62,19 +56,21 @@ public class ODBManager implements ODBEventListening {
     case 5:  // removeNode's Agents
       List<String> uLst = new ArrayList<String>(dbOwner.keySet());
       for (String uID:uLst) if (uID.charAt(0) == '+') removeAgent(uID);
-      else if (node.equals(parms.webHostName)) parms.BC.broadcast(8, node, parms.nodeList);
+      else if (node.equals(webHostName)) BC.broadcast(8, node, nodeList);
       return;
     case 1: // node up
+      joinNode(node);
+      BC.broadcast(10, webHostName, nodeList);
+      return;
     case 6: // addNode
-      if (joinNode(node)) parms.BC.broadcast(2, node, parms.nodeList); // is ready
-      else parms.BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
-      if (type == 1) parms.BC.broadcast(10, parms.webHostName, parms.nodeList);
+      joinNode(node);
       return;
     case 10:
       ForkJoinPool.commonPool().execute(()->{
         if (!nodes.containsKey(node)) try {
           ODBCluster odbc = new ODBCluster(node);
           nodes.put(node, odbc);
+          nodeList.add(node);
           cluster.add(odbc);
         } catch (Exception ex) { }
       });
@@ -89,7 +85,7 @@ public class ODBManager implements ODBEventListening {
   */
   public void connect(String uID, String dbName, String cs) throws Exception {
     if (nanoMap.get(dbName) == null) {
-      NanoDB nano = new NanoDB(parms.db_path+dbName, cs, parms.limit);
+      NanoDB nano = new NanoDB(db_path+dbName, cs, limit);
       nanoMap.put(dbName, nano);
       nano.open();
     }
@@ -128,8 +124,8 @@ public class ODBManager implements ODBEventListening {
   @param mode boolean, true: autoCommit, false: reset AutoCommit
   */
   public synchronized void autoCommit(String uID, boolean mode) {
-    if (mode) {
-      autoCom.put(uID, true); // set if true, else reset
+    if (mode) { // set if true, else reset
+      autoCom.put(uID, true);
       List<String> lst = dbOwner.get(uID);
       if (lst != null) for (String dbName:lst) dbCommit.put(dbName, true);
       if (uID.charAt(0) != '+') // tell all Agents autoommit
@@ -219,12 +215,12 @@ public class ODBManager implements ODBEventListening {
   public synchronized void add(String uID, String dbName, String key, byte[] obj) throws Exception {
     NanoDB nano = nanoMap.get(dbName);
     if (nano == null || nano.isExisted(key)) throw new Exception(key+"  exists. Or unknown "+dbName);
-    nano.addObject(key, obj);
     if (autoCom.get(uID) == null) {  // lock key
+      nano.addObject(key, obj);
       ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
       kMap.put(key, uID);
       kOwner.put(dbName, kMap);
-    } else nano.commit(key); //  and commit
+    } else nano.add(key, obj);
   }
   /**
   update() serialized object with obj at the given key to dbName (local or remote)
@@ -240,13 +236,14 @@ public class ODBManager implements ODBEventListening {
     NanoDB nano = nanoMap.get(dbName);
     if (nano == null) return false;
     if (isLocked(uID, dbName, key)) {
-      if (nano.updateObject(key, obj)) {
-        if (autoCom.get(uID) != null) {  // unlock key and commit
+      if (autoCom.get(uID) == null) {
+        if (nano.updateObject(key, obj)) return true;
+      } else { // autoCommit -> unlock key 
+        if (nano.update(key, obj)) {
           ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
           if (uID.equals(kMap.get(key)) || uID.charAt(0) == '*') {
             kMap.remove(key); // unlock key
             kOwner.put(dbName, kMap);
-            nano.commit(key);
           }
         }
         return true;
@@ -271,13 +268,14 @@ public class ODBManager implements ODBEventListening {
     NanoDB nano = nanoMap.get(dbName);
     if (nano == null) return false;
     if (isLocked(uID, dbName, key)) {
-      if (nano.deleteObject(key)) { 
-        if (autoCom.get(uID) != null) {  // unlock key and commit
+      if (autoCom.get(uID) == null) {
+        if (nano.deleteObject(key)) return true; 
+      } else { // autoCommit -> free key
+        if (nano.delete(key)) { 
           ConcurrentHashMap<String, String> kMap = kOwner.get(dbName);
           if (uID.equals(kMap.get(key)) || uID.charAt(0) == '*') {
             kMap.remove(key); // unlock key
             kOwner.put(dbName, kMap);
-            nano.commit(key);
           }
         }
         return true;
@@ -616,29 +614,29 @@ public class ODBManager implements ODBEventListening {
     cluster.remove(odbc); // remove odbc from cluster
     //
     nodes.remove(node);
-    parms.nodeList.remove(node);
-    parms.BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
+    nodeList.remove(node);
+    BC.broadcast(5, node, Arrays.asList(node+" is removed ftom Cluster"));
   }
   /**
   joinNode
   @param node String as hostname:port
-  @return boolean true for success. 
   */
-  public synchronized boolean joinNode(String node) {
+  public synchronized void joinNode(String node) {
     try {
       cluster.remove(nodes.get(node));
       ODBCluster odbc = new ODBCluster(node);
       cluster.add(odbc);  // new cluster (instance)
-      parms.nodeList.add(node);
       nodes.put(node, odbc); // reload the opened ODBs
       if (dbList.size() > 0) {
         List<String> uList = new ArrayList<String>(dbOwner.keySet());
         for (String dbName:dbList) for (String uID:uList)  // attach to DBs
         if (uID.charAt(0) != '+') odbc.connect("+"+uID+"|"+dbName, charsets.get(dbName));
       }
-      return true;
-    } catch (Exception ex) { }
-    return false;
+      nodeList.add(node);
+      BC.broadcast(2, node, nodeList); // is ready
+    } catch (Exception ex) {
+      BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
+    }
   }
   /**
   getAgent returns ODBCluster of given node
@@ -739,13 +737,25 @@ public class ODBManager implements ODBEventListening {
   */
   public void shutdown( ) throws Exception {
     // broadcast this webHostName node is down
-    parms.BC.broadcast(0, parms.webHostName, parms.nodeList);
+    BC.broadcast(0, webHostName, nodeList);
     for (String uID:uIDList) {
       for (ODBCluster odbc:cluster) odbc.disconnect("+"+uID+"|");
       removeAgent(uID);
     }
     for (ODBWorker w:workers) w.exit();
   }
+  /**
+  @param msg, String -message to be logged
+  */
+  public synchronized void logging(String msg) {
+    try {
+      logger.write((msg+System.lineSeparator()).getBytes());
+      logger.flush();
+    } catch (Exception ex) {
+      System.err.println("Unable to log: "+msg);
+    }
+  }
+  //
   private synchronized void onActive(String uID, String dbName) {
     List<String> list = dbWorker.get(dbName);
     list.remove(uID);
@@ -756,10 +766,16 @@ public class ODBManager implements ODBEventListening {
     dbWorker.remove(dbName);
     dbList.remove(dbName);
   }
-  // public data area
-  public List<String> uIDList;
+  // public data area-----------------------------------------------------------
+  public int limit;
+  public ODBBroadcaster BC;
+  public OutputStream logger;
+  public volatile boolean log;
   public List<ODBWorker> workers;
-  // private data area
+  public ODBEventListener listener;
+  public List<String> uIDList, nodeList;
+  public String db_path, broadcaster, primary, userlist, webHostName;
+  // private data area-----------------------------------------------------------
   private String userID;
   private ODBParms parms;
   private List<String> dbList;
