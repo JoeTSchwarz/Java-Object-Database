@@ -31,7 +31,7 @@ public class ODBTab implements Initializable {
     if (dbName != null && dbName.length() > 0) try {
       if (odbService.forcedClose(dbName)) {
         report.appendText(dbName+" is forced to close.\n");
-        if (parms.log) parms.logging(dbName+" is forced to close by Superuser "+JFXController.suID);
+        if (odbMgr.log) odbMgr.logging(dbName+" is forced to close by Superuser "+JFXController.suID);
       } else report.appendText("Unknown:"+dbName+".\n");
     } catch (Exception ex) {
       report.appendText("ForcedClose "+dbName+":"+ex.toString()+".\n");
@@ -44,7 +44,7 @@ public class ODBTab implements Initializable {
       if (list.size() > 0) try {
         if (odbService.forcedRollback(dbName)) {
           report.appendText(dbName+" is forced to rollback.\n");
-          if (parms.log) parms.logging(dbName+" is forced to rollback by Superuser "+JFXController.suID);
+          if (odbMgr.log) odbMgr.logging(dbName+" is forced to rollback by Superuser "+JFXController.suID);
         } else report.appendText("Unable to rollback "+dbName+".\n");
       } catch (Exception ex) {
         report.appendText("ForcedRollback "+dbName+":"+ex.toString()+".\n");
@@ -61,7 +61,7 @@ public class ODBTab implements Initializable {
         if (key != null && key.length() > 0) try {
           if (odbService.forcedRollbackKey(dbName, key)) {
             report.appendText(key+" of "+dbName+" is rollbacked.\n");
-            if (parms.log) parms.logging(key.substring(1)+" of "+dbName+" is rollbacked by Superuser "+JFXController.suID);
+            if (odbMgr.log) odbMgr.logging(key.substring(1)+" of "+dbName+" is rollbacked by Superuser "+JFXController.suID);
           } else report.appendText("Unable to rollback "+key+" of "+dbName+"\n");
         } catch (Exception ex) {
           report.appendText("ForcedRollbackKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
@@ -76,7 +76,7 @@ public class ODBTab implements Initializable {
       if (list.size() > 0) try {
           if (odbService.forcedFreeKeys(dbName)) {
             report.appendText("All keys of "+dbName+" are freed.\n");
-            if (parms.log) parms.logging("All keys of "+dbName+" are freed by Superuser "+JFXController.suID);
+            if (odbMgr.log) odbMgr.logging("All keys of "+dbName+" are freed by Superuser "+JFXController.suID);
           } else report.appendText("Unable to free all keys of "+dbName+".\n");
       } catch (Exception ex) {
         report.appendText("ForcedFreeKeys "+dbName+":"+ex.toString()+".\n");
@@ -93,7 +93,7 @@ public class ODBTab implements Initializable {
         if (key != null && key.length() > 0) try {
           if (odbService.forcedFreeKey(dbName, key)) {
             report.appendText(key+" of "+dbName+" is freed.\n");
-            if (parms.log) parms.logging(key.substring(1)+" of "+dbName+" is freed by Superuser "+JFXController.suID);
+            if (odbMgr.log) odbMgr.logging(key.substring(1)+" of "+dbName+" is freed by Superuser "+JFXController.suID);
           } else report.appendText("Unable to free "+key+" of "+dbName+"\n");
         } catch (Exception ex) {
           report.appendText("ForcedFreeKey:"+key+" of "+dbName+":"+ex.toString()+".\n");
@@ -132,7 +132,7 @@ public class ODBTab implements Initializable {
   */
   public void setParm(ODBService odbService) {
     this.odbService = odbService;
-    parms = odbService.getODBParms();
+    odbMgr = odbService.getODBManager();
   }
   /**
   setNode
@@ -143,6 +143,6 @@ public class ODBTab implements Initializable {
   }
   //
   private String webHost;
-  private ODBParms parms;
+  private ODBManager odbMgr;
   private ODBService odbService;
 }
