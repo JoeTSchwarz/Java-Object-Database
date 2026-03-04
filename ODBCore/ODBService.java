@@ -21,7 +21,6 @@ public class ODBService {
   */
   public ODBService(String config) throws Exception {
     odbMgr = new ODBManager(config);
-    // launch Broadcaster, Listener, ODBManager and server
     pool = Executors.newFixedThreadPool(8);
     pool.execute(odbMgr.listener);
     pool.execute(odbMgr.BC);
@@ -227,3 +226,4 @@ public class ODBService {
   private ExecutorService pool;
   private ODBManager odbMgr;
 }
+
