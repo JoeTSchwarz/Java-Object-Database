@@ -2,6 +2,7 @@ package joeapp.odb;
 
 import java.io.*;
 import java.util.*;
+import java.time.*;
 import java.util.zip.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
@@ -16,21 +17,29 @@ Object Data Manager
 public class ODBManager implements ODBEventListening {
   /**
   contructor. ODBManager is responsible for the coomunication between ODBWorker/ODBCluster and NanoDB
+  @param config String, Server's config file name
+  @exception Exception thrown by JAVA
   */
-  public ODBManager( ) {
-    nodes = new ConcurrentHashMap<>();
-    kOwner = new ConcurrentHashMap<>();
-    dbOwner = new ConcurrentHashMap<>();
-    autoCom = new ConcurrentHashMap<>();
-    nanoMap = new ConcurrentHashMap<>();
-    charsets = new ConcurrentHashMap<>();
-    dbWorker = new ConcurrentHashMap<>();
-    dbCommit = new ConcurrentHashMap<>();
-    dbList = Collections.synchronizedList(new ArrayList<>());
-    uIDList = Collections.synchronizedList(new ArrayList<>());
-    workers = Collections.synchronizedList(new ArrayList<>());
-    cluster = Collections.synchronizedList(new ArrayList<>());
-    nodeList = Collections.synchronizedList(new ArrayList<>());
+  public ODBManager(String config) throws Exception {
+    LocalDateTime now = LocalDateTime.now();
+    HashMap<String, String> map = ODBParser.odbProperty(config);
+    db_path = map.get("ODB_PATH").replace(File.separator, "/")+"/";
+    // create a LOG txt file with DayOfWeek day Month Year Hour minute Second
+    int d = now.getDayOfMonth(), month = now.getMonthValue(), year = now.getYear();
+    logName = map.get("LOG_PATH")+String.format("%s_%02d_%02d_%04d_%02dH%02dMin%02dSec.txt",
+              LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
+              d, month, year, now.getHour(), now.getMinute(), now.getSecond());
+    logger = new BufferedOutputStream(new FileOutputStream(logName, false));
+    limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT"));
+    userList = new UserList(map.get("USERLIST"));
+    log = map.get("LOGGING").charAt(0) == '1';
+    broadcaster =  map.get("MULTICASTING");
+    primary = map.get("PRIMARY");
+    //
+    webHostName = map.get("WEB_HOST/IP")+":"+primary;
+    listener = new ODBEventListener(broadcaster);
+    BC = new ODBBroadcaster(broadcaster);
+    listener.addListener(this);
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -735,14 +744,22 @@ public class ODBManager implements ODBEventListening {
   shutdown() closes ALL open db and Agents
   @exception Exception thrown by JAVA
   */
-  public void shutdown( ) throws Exception {
-    // broadcast this webHostName node is down
-    BC.broadcast(0, webHostName, nodeList);
-    for (String uID:uIDList) {
-      for (ODBCluster odbc:cluster) odbc.disconnect("+"+uID+"|");
-      removeAgent(uID);
-    }
-    for (ODBWorker w:workers) w.exit();
+  public void shutdown( ) {
+    try {
+      // broadcast this webHostName node is down
+      BC.broadcast(0, webHostName, nodeList);
+      for (String uID:uIDList) {
+        for (ODBCluster odbc:cluster) odbc.disconnect("+"+uID+"|");
+        removeAgent(uID);
+      }
+      for (ODBWorker w:workers) w.exit();
+      if (log) {
+        logging("ODBService is down."+System.lineSeparator());
+        logger.close();
+      } else (new File(logName)).delete();
+      listener.exit(); // stop Listener
+      BC.exit(); // stop ODBBroadcaster
+    } catch (Exception ex) { }
   }
   /**
   @param msg, String -message to be logged
@@ -768,22 +785,34 @@ public class ODBManager implements ODBEventListening {
   }
   // public data area-----------------------------------------------------------
   public int limit;
+  public UserList userList;
   public ODBBroadcaster BC;
   public OutputStream logger;
   public volatile boolean log;
-  public List<ODBWorker> workers;
   public ODBEventListener listener;
-  public List<String> uIDList, nodeList;
-  public String db_path, broadcaster, primary, userlist, webHostName;
+  public String db_path, broadcaster, primary, webHostName;
+  //
+  public List<String> uIDList = Collections.synchronizedList(new ArrayList<>());
+  public List<String> nodeList = Collections.synchronizedList(new ArrayList<>());
+  //
+  public List<ODBWorker> workers = Collections.synchronizedList(new ArrayList<>());
   // private data area-----------------------------------------------------------
-  private String userID;
-  private ODBParms parms;
-  private List<String> dbList;
-  private List<ODBCluster> cluster;
-  private ConcurrentHashMap<String, NanoDB> nanoMap;
-  private ConcurrentHashMap<String, String> charsets;
-  private ConcurrentHashMap<String, ODBCluster> nodes;
-  private ConcurrentHashMap<String, Boolean> autoCom, dbCommit;
-  private ConcurrentHashMap<String, List<String>> dbOwner, dbWorker;
-  private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> kOwner;
+  protected String userID, logName;
+  //
+  private List<String> dbList = Collections.synchronizedList(new ArrayList<>());
+  private List<ODBCluster> cluster = Collections.synchronizedList(new ArrayList<>());
+  //
+  private ConcurrentHashMap<String, NanoDB> nanoMap = new ConcurrentHashMap<>();
+  //
+  private ConcurrentHashMap<String, Boolean> autoCom = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, Boolean> dbCommit = new ConcurrentHashMap<>();
+  //
+  private ConcurrentHashMap<String, String> charsets = new ConcurrentHashMap<>();
+  //
+  private ConcurrentHashMap<String, ODBCluster> nodes = new ConcurrentHashMap<>();
+  //
+  private ConcurrentHashMap<String, List<String>> dbOwner = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, List<String>> dbWorker = new ConcurrentHashMap<>();
+  //
+  private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> kOwner = new ConcurrentHashMap<>();
 }

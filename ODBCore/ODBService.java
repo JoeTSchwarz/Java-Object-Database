@@ -2,7 +2,6 @@ package joeapp.odb;
 
 import java.io.*;
 import java.net.*;
-import java.time.*;
 import java.util.*;
 import java.math.BigInteger;
 import java.util.concurrent.*;
@@ -21,24 +20,7 @@ public class ODBService {
   @exception Exception thrown by JAVA
   */
   public ODBService(String config) throws Exception {
-    odbMgr = new ODBManager( );
-    LocalDateTime now = LocalDateTime.now();
-    HashMap<String, String> map = ODBParser.odbProperty(config);
-    odbMgr.db_path = map.get("ODB_PATH").replace(File.separator, "/")+"/";
-    // create a LOG txt file with DayOfWeek day Month Year Hour minute Second
-    int d = now.getDayOfMonth(), month = now.getMonthValue(), year = now.getYear();
-    logName = map.get("LOG_PATH")+String.format("%s_%02d_%02d_%04d_%02dH%02dMin%02dSec.txt",
-              LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
-              d, month, year, now.getHour(), now.getMinute(), now.getSecond());
-    odbMgr.logger = new BufferedOutputStream(new FileOutputStream(logName, false));
-    odbMgr.log = map.get("LOGGING").charAt(0) == '1';
-    odbMgr.userlist =  map.get("USERLIST");
-    hostName = map.get("WEB_HOST/IP");
-    odbMgr.primary = map.get("PRIMARY");
-    odbMgr.broadcaster =  map.get("MULTICASTING");
-    odbMgr.webHostName = hostName+":"+odbMgr.primary;
-    odbMgr.BC = new ODBBroadcaster(odbMgr.broadcaster);
-    odbMgr.listener = new ODBEventListener(odbMgr.broadcaster);
+    odbMgr = new ODBManager(config);
     // launch Broadcaster, Listener, ODBManager and server
     pool = Executors.newFixedThreadPool(8);
     pool.execute(odbMgr.listener);
@@ -48,17 +30,18 @@ public class ODBService {
       boolean ok = false;
       try {
         dbSvr = ServerSocketChannel.open();
-        dbSvr.socket().bind(new InetSocketAddress(hostName, Integer.parseInt(odbMgr.primary)));
+        dbSvr.socket().bind(new InetSocketAddress(odbMgr.webHostName.substring(0, odbMgr.webHostName.indexOf(":")),
+                                                  Integer.parseInt(odbMgr.primary)));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
         ok = true; // set OK
         while (true) (new ODBWorker(dbSvr.accept(), odbMgr)).start();
-      } catch (Exception e) { }
-      if (!ok) { // something wrong with dbSvr: hostName  Port?
-        System.err.println("Cannot start ODB Server. Pls. check: "+odbMgr.webHostName);
-        System.exit(0);
+      } catch (Exception e) {
+        if (!ok) { // something wrong with dbSvr: hostName  Port?
+          System.err.println("Cannot start ODB Server. Pls. check: "+odbMgr.webHostName);
+          System.exit(0);
+        }
       }
     });
-    odbMgr.listener.addListener(odbMgr);
     odbMgr.BC.broadcast(1, odbMgr.webHostName, odbMgr.nodeList);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
@@ -73,7 +56,7 @@ public class ODBService {
     odbMgr.log = enabled;
   }
   /**
-  @return ODBParms
+  @return ODBManager
   */
   public ODBManager getODBManager() {
     return odbMgr;
@@ -235,19 +218,12 @@ public class ODBService {
     try {
       odbMgr.shutdown( );
       dbSvr.close();
-      if (odbMgr.log) {
-        odbMgr.logging("ODBService is down."+System.lineSeparator());
-        odbMgr.logger.close();
-      } else (new File(logName)).delete();
-      odbMgr.listener.exit(); // stop Listener
-      odbMgr.BC.exit(); // stop ODBBroadcaster
     } catch (Exception ex) { }
     pool.shutdownNow(); // close Pool
   }
   //
   private ODBIOStream ios = new ODBIOStream();
   private ServerSocketChannel dbSvr;
-  private String hostName, logName;
   private ExecutorService pool;
   private ODBManager odbMgr;
 }
