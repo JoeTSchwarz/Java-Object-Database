@@ -21,6 +21,7 @@ public class ODBService {
   */
   public ODBService(String config) throws Exception {
     odbMgr = new ODBManager(config);
+    // launch Broadcaster, Listener, ODBManager and server
     pool = Executors.newFixedThreadPool(8);
     pool.execute(odbMgr.listener);
     pool.execute(odbMgr.BC);
@@ -61,6 +62,12 @@ public class ODBService {
     return odbMgr;
   } 
   /**
+  @return UserList
+  */
+  public UserList getUserList() {
+    return odbMgr.userList;
+  } 
+  /**
   addNode a new node to the cluster ring
   @param node String with the foemat HostName:Port or HostIP:Port
   */
@@ -85,8 +92,7 @@ public class ODBService {
       if (ip.length == 2) {
         SocketChannel soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
         ByteBuffer buf = ByteBuffer.allocate(32);
-        //
-        ios.reset();
+        ODBIOStream ios = new ODBIOStream();
         // send(99, "*")
         ios.writeInt((99<<24)+0x100+0x58);
         long beg = System.currentTimeMillis();
@@ -221,9 +227,7 @@ public class ODBService {
     pool.shutdownNow(); // close Pool
   }
   //
-  private ODBIOStream ios = new ODBIOStream();
   private ServerSocketChannel dbSvr;
   private ExecutorService pool;
   private ODBManager odbMgr;
 }
-
