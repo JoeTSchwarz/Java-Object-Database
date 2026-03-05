@@ -14,14 +14,10 @@ MVC-Modelling with SWINGLoader Package
 public class UserTab {
   /**
   UserTab
-  @param map HashMap with String as keys (defined in the model) and Object as values (J Components)
-  @param uList UserList instance
-  @param uFile UserList file name
+  @param map HashMap of J-Swing elements
   */
-  public UserTab(HashMap<String, Object> map,  UserList uList, String uFile) {
+  public UserTab(HashMap<String, Object> map) {
     this.map = map;
-    this.uList = uList;
-    this.uFile = uFile;
     frame = (JFrame)map.get("frame");
     report = (JTextArea) map.get("area2");
     tPri = (JFormattedTextField) map.get("pri");
@@ -101,6 +97,14 @@ public class UserTab {
   public void authenticate(String pw, String uid) {
     suID = uid;
     suPW = pw;
+  }
+  /**
+  setODBService
+  @param odbService ODBService instance
+  */
+  public void setODBService(ODBService odbService) {
+    uFile = odbService.getODBManager().userFile;
+    uList = odbService.getUserList();
   }
   /**
   add a new user

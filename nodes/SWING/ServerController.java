@@ -21,23 +21,14 @@ public class ServerController {
   @SuppressWarnings("unchecked")
   public ServerController(HashMap<String, Object> map, String[] parms) {
     this.map = map;
-    try {
-      prop = ODBParser.odbProperty(parms[0]);
-      uFile = prop.get("USERLIST");
-      uList = new UserList(uFile);
-    } catch (Exception ex) {
-      ex.printStackTrace();
-      System.exit(0);
-    }
     // start Sysmon
     JFrame frame = (JFrame)map.get("frame");
     tabbed = (JTabbedPane) map.get("Tabbed");
     //
     frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-    serverTab = new ServerTab(map, prop, uList, this, parms[0]);
-    userTab = new UserTab(map, uList, uFile);
+    serverTab = new ServerTab(map, this, parms[0]);
+    userTab = new UserTab(map);
     odbTab = new ODBTab(map);
-    odbTab.setNode(serverTab.getNode());
     // customized JPanel SysMonSWING from _tab4_.txt
     tabbed.addChangeListener(e -> {
       int idx = tabbed.getSelectedIndex();
@@ -67,19 +58,20 @@ public class ServerController {
   */
   public void setService(ODBService odbService) {
     this.odbService = odbService;
-    odbTab.setService(odbService);
+    uList = odbService.getUserList();
+    odbTab.setODBService(odbService);
+    userTab.setODBService(odbService);
   }
   //
   protected static String suID;
   //
-  private HashMap<String, String> prop;
   private HashMap<String, Object> map;
+  private String uFile, config;
   private ODBService odbService;
   private ServerTab serverTab;
   private JTabbedPane tabbed;
   private UserTab userTab;
   private UserList uList;
   private ODBTab odbTab;
-  private String uFile;
 }
 

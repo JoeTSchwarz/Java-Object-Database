@@ -14,6 +14,7 @@ public class ODBTab {
   /**
   ODBTab Controller
   @param map HashMap of J-Swing elements
+  @param odbService ODBService instance
   */
   public ODBTab(HashMap<String, Object> map) {
     this.map = map;
@@ -124,18 +125,19 @@ public class ODBTab {
     });
   }
   /**
-  setService
-  @param odbService ODBService
-  */
-  public void setService(ODBService odbService) {
-    this.odbService = odbService;
-    odbMgr = odbService.getODBManager();
-  }
-  /**
   @param webHost String, HostName:Port of this server
   */
   public void setNode(String webHost) {
     this.webHost = webHost;
+  }
+  /**
+  setODBService
+  @param odbService ODBService instance
+  */
+  public void setODBService(ODBService odbService) {
+    this.odbService = odbService;
+    odbMgr = odbService.getODBManager();
+    webHost = odbMgr.webHostName;
   }
   //
   private String webHost;

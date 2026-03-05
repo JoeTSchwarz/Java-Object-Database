@@ -16,26 +16,17 @@ MVC-Modelling with SWINGLoader Package
 public class ServerTab implements ODBEventListening {
   /**
   ServerTab an implementation of ODBListening
-  @param map HashMap with String as keys (defined in the model) and Object as values (J Components)
-  @param prop Proprieties map
-  @param uList UserList
+  @param map HashMap of J-Swing elements
   @param serverController ServerController
+  @param config String
   */
   @SuppressWarnings("unchecked")
-  public ServerTab(HashMap<String, Object> map, HashMap<String, String> prop,
-                   UserList uList, ServerController serverController, String config) {
-    this.map = map;
-    this.prop = prop;
-    this.uList = uList;
+  public ServerTab(HashMap<String, Object> map, ServerController serverController, String config) {
     this.config = config;
     this.serverController = serverController;
     //
     frame = (JFrame)map.get("frame");
     log = ((JButton)map.get("log"));
-    logOn = prop.get("LOGGING").charAt(0) == '1';
-    if (logOn) log.setText("LOG Disable");
-    else log.setText("LOG Enable");
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
     report = (JTextArea) map.get("area1");
     report.setText("Report Area.\n");
     report.setEditable(false);
@@ -50,9 +41,16 @@ public class ServerTab implements ODBEventListening {
     ((JButton) map.get("start")).addActionListener(e -> {
       try {
         odbService = new ODBService(config);
+        ODBManager odbMgr = odbService.getODBManager();
+        serverController.setService(odbService);
+        uList = odbService.getUserList();
+        logOn = odbMgr.log;
+        if (logOn) log.setText("LOG Disable");
+        else log.setText("LOG Enable");
+        webHost = odbMgr.webHostName;
         report.append("ODBServer is started.\nPrimary Node: "+webHost+" is ONLINE\n");
         if (!registered) {
-          odbService.register(This);
+          odbService.register(this);
           registered = true;
         }
         log.setEnabled(true);
@@ -219,24 +217,15 @@ public class ServerTab implements ODBEventListening {
   public boolean isOnline() {
     return registered;
   }
-  /**
-  getNode
-  return String for this node: hostName/IP:Port
-  */
-  public String getNode() {
-    return webHost;
-  }
   //----------------------------------------------------------------------------
   private JButton log;
   private JFrame frame;
   private UserList uList;
   private JTextArea report;
-  private ServerTab This = this;
   private ODBService odbService;
   private String webHost, config;
   private JComboBox<String> bPing;
   private HashMap<String, Object> map;
-  private HashMap<String, String> prop;
   private ServerController serverController;
   private boolean registered = false, logOn;
   private ArrayList<String> nodes = new ArrayList<>();
