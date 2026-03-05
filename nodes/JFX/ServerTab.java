@@ -37,9 +37,15 @@ public class ServerTab implements Initializable, ODBEventListening {
   }
   @FXML private void start() {
     try {
-      Start.setDisable(true);
       odbService = new ODBService(config);
-      jfxController.setODBService(odbService);
+      ODBManager odbMgr = odbService.getODBManager();
+      uList = odbService.getUserList();
+      logOn = odbMgr.log;
+      if (logOn) LogEnable.setText("LOG Disable");
+      else LogEnable.setText("LOG Enable");
+      webHost = odbMgr.webHostName;
+      jfxController.setParm(odbService);
+      Start.setDisable(true);
       ODBController.setParm(odbService); // load Tab ODBMaintenance
       Start.setStyle("-fx-background-color: #7fff00; -fx-text-fill: blue"); // green/blue
       report.appendText("ODBServer is started.\nPrimary Node: "+webHost+" is ONLINE\n");
@@ -207,24 +213,15 @@ public class ServerTab implements Initializable, ODBEventListening {
   }
   /**
   loadParm
-  @param prop HashMap of ODBService properies
-  @param config JODB config file
-  @param uList UserList instance
+  @param odbService ODBService instance
   @param odbController ODBTab instance
   @param jfxController JFXController instance
   */
-  public void loadParm(HashMap<String, String> prop, String config,
-                       UserList uList, ODBTab ODBController,
+  public void loadParm(String config, ODBTab ODBController,
                        JFXController jfxController) {
-    this.prop = prop;
-    this.uList = uList;
     this.config = config;
     this.ODBController = ODBController;
     this.jfxController = jfxController;
-    logOn = prop.get("LOGGING").charAt(0) == '1';
-    if (logOn) LogEnable.setText("LOG Disable");
-    else LogEnable.setText("LOG Enable");
-    webHost = prop.get("WEB_HOST/IP")+":"+prop.get("PRIMARY");
     PingNode.setButtonCell(new ListCell<>() {
       @Override // set prompt text if empty or 0 item
       protected void updateItem(String item, boolean empty) {
@@ -245,9 +242,8 @@ public class ServerTab implements Initializable, ODBEventListening {
   private UserList uList;
   private ODBTab ODBController;
   private ODBService odbService;
-  private String config, webHost;
+  private String webHost, config;
   private JFXController jfxController;
-  private HashMap<String, String> prop;
   private ArrayList<String> nodes = new ArrayList<String>();
   private static boolean registered = false, mod = false, logOn;
 }

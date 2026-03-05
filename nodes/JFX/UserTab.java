@@ -194,10 +194,10 @@ public class UserTab implements Initializable {
   }
   @FXML private void recover() {
     if (JFXController.jfx.confirm("Recover userlist")) try {
-      uList.recover(prop.get("USERLIST"));
+      uList.recover(odbMgr.userFile);
       report.setText("Recover completed.");
     } catch (Exception ex) {
-      report.appendText("Unable to recover:"+prop.get("ODB_PATH")+
+      report.appendText("Unable to recover:"+odbMgr.db_path+
                         "/userlist.\nReason:\n"+ex.toString());
     }
   }
@@ -222,9 +222,9 @@ public class UserTab implements Initializable {
     if (but != null) but.setDisable(!on);
   }
   //
-  public void loadParm(HashMap<String, String> prop, UserList uList) {
-    this.uList = uList;
-    this.prop = prop;
+  public void loadParm(ODBService odbService) {
+    this.uList = odbService.getUserList();
+    odbMgr = odbService.getODBManager();
   }
   //
   public void superuser(String suID, String suPW) {
@@ -254,7 +254,7 @@ public class UserTab implements Initializable {
       }
     });
   }
-  private HashMap<String, String> prop;
+  private ODBManager odbMgr;
   private String suPW, suID;
   private UserList uList;
   private boolean mod;

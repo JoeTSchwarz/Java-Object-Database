@@ -47,37 +47,26 @@ public class JFXController implements Initializable {
     }
     if (model.getSelectedIndex() == 1) UserController.superuser(aut[0], aut[1]);
   }
-  // call back from ODBServer
   /**
-  setODBService
-  @param odbService ODBService
+  setParm - load JODB server properties
+  @param config String, JODB config file name
   */
-  public void setODBService(ODBService odbService) {
-    this.odbService = odbService;
-  }
-  /**
-  getODBService
-  @return ODBService
-  */
-  public ODBService getODBService( ) {
-    return odbService;
+  public void setParm(String config) throws Exception {
+    ServerController.loadParm(config, ODBController, this);
   }
   /**
   setParm - load JODB server properties
-  @param prop ODBService properties
-  @param config String, JODB config file name
-  @param uList UserList instance
+  @param odbService ODBService instance
   */
-  public void setParm(HashMap<String, String> prop, String config, UserList uList) {
-    this.uList = uList;
-    ServerController.loadParm(prop, config, uList, ODBController, this);
-    UserController.loadParm(prop, uList);
+  public void setParm(ODBService odbService) throws Exception {
+    uList = odbService.getUserList();
+    UserController.loadParm(odbService);
   }
   //
   protected static JFXOptions jfx;
   protected static String suPW, suID;
+  protected ODBService odbService;
   //
   private UserList uList;
-  private ODBService odbService;
   private SingleSelectionModel<Tab> model;
 }

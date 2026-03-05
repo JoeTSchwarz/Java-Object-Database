@@ -28,14 +28,6 @@ public class JFXODBServer extends Application {
     config = parm.get(0);
     if (parm.size() > 1) css = parm.get(1);
     else css = "resources/joe.css";
-    try {
-      prop = ODBParser.odbProperty(config);
-      uList = new UserList(prop.get("USERLIST"));
-    } catch (Exception ex) {
-      if (prop == null) System.out.println("can't parse "+config);
-      else System.err.println("Unable to access UserList.");
-      System.exit(0);
-    }   
   }
   /**
   start implement
@@ -49,18 +41,17 @@ public class JFXODBServer extends Application {
     // do NOTHING on clicking at X-button
     // in case that ODBServer isn't ready
     stage.setOnCloseRequest(e -> {
-      if (server == null && server.getODBService() == null) {
+      if (server == null && server.odbService == null) {
         Platform.exit();
         System.exit(0);
       } else e.consume();
     });
     stage.show();
     server = (JFXController)fxml.getController();
-    server.setParm(prop, config, uList);
+    server.setParm(config);
   }
   //
   private String config;
-  private UserList uList;
   public static String css;
   private JFXController server;
   private HashMap<String, String> prop;

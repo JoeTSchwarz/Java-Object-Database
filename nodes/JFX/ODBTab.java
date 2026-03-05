@@ -133,6 +133,7 @@ public class ODBTab implements Initializable {
   public void setParm(ODBService odbService) {
     this.odbService = odbService;
     odbMgr = odbService.getODBManager();
+    webHost = odbMgr.webHostName;
   }
   /**
   setNode
