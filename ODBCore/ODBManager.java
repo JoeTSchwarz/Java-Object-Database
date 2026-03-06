@@ -30,11 +30,11 @@ public class ODBManager implements ODBEventListening {
               LocalDate.of(year, month,  d).getDayOfWeek().name().substring(0, 3),
               d, month, year, now.getHour(), now.getMinute(), now.getSecond());
     logger = new BufferedOutputStream(new FileOutputStream(logName, false));
-    // ODB_Nano only
-    long lo = Long.parseLong(map.get("MAX_CACHE_LIMIT"));
-    if (lo > 0x7FFFFFFF) limit = 0x7FFFFFFF;  // 2GB
-    else if (lo < 0x100000) limit = 0x100000; // 1MB
-    else limit = (int) lo;
+    //                 ODB_Nano only
+    limit = Integer.parseInt(map.get("MAX_CACHE_LIMIT"));
+    if (limit > 4096) limit = 4096 * 0x100000; // 4GB
+    else if (limit < 1) limit = 0x100000;      // 1MB
+    else limit *= 0x100000;
     //
     log = map.get("LOGGING").charAt(0) == '1';
     broadcaster =  map.get("MULTICASTING");
@@ -791,13 +791,12 @@ public class ODBManager implements ODBEventListening {
   }
   // public data area-----------------------------------------------------------
   public int limit;
-  public String userFile;
   public UserList userList;
   public ODBBroadcaster BC;
   public OutputStream logger;
   public volatile boolean log;
   public ODBEventListener listener;
-  public String db_path, broadcaster, primary, webHostName;
+  public String db_path, broadcaster, primary, webHostName, userFile;
   //
   public List<String> uIDList = Collections.synchronizedList(new ArrayList<>());
   public List<String> nodeList = Collections.synchronizedList(new ArrayList<>());
