@@ -18,33 +18,33 @@ Nano Database. Instantiated and maintained by ODBManager
 public class NanoDB {
   /**
   constructor with 2 MB Cache
-  @param fName  String, file name
+  @param dbName  String, file name
   @exception Exception thrown by JAVA
   */
-  public NanoDB(String fName) {
-    this.fName = fName;
+  public NanoDB(String dbName) {
+    this.dbName = dbName;
     cs = Charset.forName("UTF-8");
   }
   /**
   constructor
-  @param fName  String, file name
+  @param dbName  String, file name
   @param limit  int, max. size to be cached
   @exception Exception thrown by JAVA
   */
-  public NanoDB(String fName, int limit) {
-    this.fName = fName;
+  public NanoDB(String dbName, int limit) {
+    this.dbName = dbName;
     this.limit = limit;
     cs = Charset.forName("UTF-8");
   }
   /**
   constructor
-  @param fName  String, file name
+  @param dbName  String, file name
   @param limit  int, max. size to be cached
   @param charsetName String, character set name (e.g. "UTF-8");
   @exception Exception thrown by JAVA
   */
-  public NanoDB(String fName, String charsetName, int limit) {
-    this.fName = fName;
+  public NanoDB(String dbName, String charsetName, int limit) {
+    this.dbName = dbName;
     this.limit = limit;
     cs = Charset.forName(charsetName);
   }
@@ -96,7 +96,17 @@ public class NanoDB {
     oCache.put(key, new byte[] {});
     cache.put(key, buf);
     keysList.add(key);
-    mod = true;
+  }
+  /**
+  add with autoCommit
+  @param key String
+  @param buf byte array of a (non)serialized object in byte array
+  */
+  // check for existed key is done by ODBManager
+  public synchronized void add(String key, byte[] buf) {
+    cache.put(key, buf);
+    keysList.add(key);
+    committed = true;
   }
   /**
   deleteObject
@@ -105,18 +115,36 @@ public class NanoDB {
   */
   public synchronized boolean deleteObject(String key) {
     if (!oCache.containsKey(key)) try {
-      if (cache.containsKey(key)) oCache.put(key, cache.remove(key));
-      else {
+      if (cached) {
+        if (!cache.containsKey(key)) return false;
+        oCache.put(key, cache.remove(key));
+      } else {
+        if (!pointers.containsKey(key)) return false;
         byte[] buf = new byte[sizes.get(key)];
         raf.seek(pointers.get(key));
         raf.read(buf);
         oCache.put(key, buf);
       }
       keysList.remove(key);
-      mod = true;
       return true;
     } catch (Exception e) { }
     return false;
+  }
+  /**
+  delete with autoCommit
+  @param key String
+  @return boolean true if success
+  */
+  public synchronized boolean delete(String key) {
+    if (cached) {
+      if (!cache.containsKey(key)) return false;
+      cache.remove(key);
+    } else {
+      if (!pointers.containsKey(key)) return false;
+    }
+    keysList.remove(key);
+    committed = true;
+    return true;
   }
   /**
   updateObject
@@ -126,18 +154,36 @@ public class NanoDB {
   */
   public synchronized boolean updateObject(String key, byte[] buf) {
     if (!oCache.containsKey(key)) try {
-      if (cache.containsKey(key)) oCache.put(key, cache.get(key));
-      else {
+      if (cached) {
+        if (!cache.containsKey(key)) return false;
+         oCache.put(key, cache.get(key));
+      } else {
+        if (!pointers.containsKey(key)) return false;
         byte[] bb = new byte[sizes.get(key)];
         raf.seek(pointers.get(key));
         raf.read(bb); // fetch
         oCache.put(key, bb);
       }
       cache.put(key, buf);
-      mod = true;
       return true;
     } catch (Exception ex) { }
     return false;
+  }
+  /**
+  update with autoCommit
+  @param key String
+  @param buf byte array of a (non)serialized object in byte array
+  @return boolean true if success
+  */
+  public synchronized boolean update(String key, byte[] buf) {
+    if (cached) {
+      if (!cache.containsKey(key)) return false;
+    } else {
+      if (!pointers.containsKey(key)) return false;
+    }
+    cache.put(key, buf);
+    committed = true;
+    return true;
   }
   /**
   commit transaction of the given key. Locked key will be remove
@@ -186,27 +232,25 @@ public class NanoDB {
   }
   /**
   open NanoDB
-  <br>If the specified fName from Constructor does not exist, it will be created with the fName.
+  <br>If the specified dbName from Constructor does not exist, it will be created with the dbName.
   */
   public synchronized void open() throws Exception {
-    if (raf != null) throw new Exception(fName+" is opened.");
-    keysList = Collections.synchronizedList(new ArrayList<String>(512));
-    pointers = new ConcurrentHashMap<>(512);
-    oCache =  new ConcurrentHashMap<>(512);
-    cache = new ConcurrentHashMap<>(512);
-    sizes = new ConcurrentHashMap<>(512);
+    if (raf != null) throw new Exception(dbName+" is opened.");
+    keysList.clear();
+    pointers.clear();
+    oCache.clear();
+    cache.clear();
+    sizes.clear();
     // load keysList, pointers and sizes
-    raf = new RandomAccessFile(fName, "rw");
-    existed = (new File(fName)).exists();
+    existed = (new File(dbName)).exists();
+    raf = new RandomAccessFile(dbName, "rw");
     fLocked = raf.getChannel().lock();
     committed = false;
     // new NanoDB ?
     if (!existed) {
       cached = false;
-      mod = true;
       return;
     }
-    mod = false;
     boolean full = false;
     cached = raf.length() < limit;
     long pt  = (long)raf.readInt();
@@ -240,9 +284,12 @@ public class NanoDB {
   public synchronized void close() {
     if (raf != null) try {
       save();
+      cache.clear();
       fLocked.release();
       raf.close();
     } catch (Exception ex) { }
+    committed = false;
+    existed = false;
     raf = null;
   }
   /**
@@ -250,9 +297,8 @@ public class NanoDB {
   @exception Exception thrown by JAVA
   */
   public synchronized void save() throws Exception {
-    if (raf == null) return;
-    if (committed) {
-      if (committed && oCache.size() > 0) { // recover the UNcommitted
+    if (raf != null && committed) {
+      if (oCache.size() > 0) { // recover the UNcommitted
         List<String> keys = new ArrayList<>(oCache.keySet());
         for (String key:keys) { // recover
           byte[] bb = oCache.remove(key);
@@ -268,92 +314,89 @@ public class NanoDB {
           }
         }
       }
-      if (mod) { // modified content?
-        ConcurrentHashMap<String, Long> pts = new ConcurrentHashMap<>(pointers.size());
-        ConcurrentHashMap<String, Integer> szs = new ConcurrentHashMap<>(sizes.size());
-        String tmp = String.format("%s_tmp", fName);
-        if (!existed || cached) {
-          tmp = fName;
-          szs = sizes;
-          pts = pointers;
-          fLocked.release(); // release raf
-          raf.close(); // data in cache: so delete
-          if (cached) (new File(fName)).delete();
-        }
-        ByteArrayOutputStream bao = new ByteArrayOutputStream(65536);
-        RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
-        FileLock fL = rTmp.getChannel().lock();
-        // the key block
-        int kl, dl;
-        for (String key : keysList) {
-          kl = key.length();
-          if (cache.containsKey(key)) dl = cache.get(key).length;
-          else dl = sizes.get(key);
-          //
-          bao.write(new byte[] { (byte)(kl / 0x100),
-                                 (byte) kl,
-                                 (byte)(dl / 0x1000000),
-                                 (byte)(dl / 0x10000),
-                                 (byte)(dl / 0x100),
-                                 (byte) dl
-                               }
-                   );
-          bao.write(key.getBytes(cs));
-        }
-        bao.flush();
-        long pt = 4+bao.size();
-        rTmp.write(new byte[] {(byte)((int)pt / 0x1000000),
-                               (byte)((int)pt / 0x10000),
-                               (byte)((int)pt / 0x100),
-                               (byte) (int)pt
-                              }
-                  );
-        rTmp.write(bao.toByteArray());
-        bao.close();
-        // now the data block
-        for (String k : keysList) {
-          byte[] bb = cache.get(k);
-          if (bb == null) {
-            bb = new byte[sizes.get(k)];           
-            raf.seek(pointers.get(k));
-            raf.read(bb);
-          }
-          // save data
-          rTmp.write(bb, 0, bb.length);
-          szs.put(k, bb.length);
-          pts.put(k, pt);
-        }
-        fL.release();
-        rTmp.close();
-        if (existed) {// && !cached) {
-          fLocked.release();
-          raf.close();
-          File fi = new File(fName);
-          fi.delete(); // delete the old
-          TimeUnit.MICROSECONDS.sleep(20);
-          (new File(tmp)).renameTo(fi);
-          pointers = pts;
-          sizes = szs;
-        } 
-        raf = new RandomAccessFile(fName, "rw");
-        fLocked = raf.getChannel().lock();
+      ConcurrentHashMap<String, Long> pts = new ConcurrentHashMap<>(pointers.size());
+      ConcurrentHashMap<String, Integer> szs = new ConcurrentHashMap<>(sizes.size());
+      String tmp = String.format("%s_tmp", dbName);
+      if (!existed || cached) {
+        tmp = dbName;
+        szs = sizes;
+        pts = pointers;
+        fLocked.release(); // release raf
+        raf.close(); // data in cache: so delete
+        if (cached) (new File(dbName)).delete();
       }
+      ByteArrayOutputStream bao = new ByteArrayOutputStream(65536);
+      RandomAccessFile rTmp = new RandomAccessFile(tmp, "rw");
+      FileLock fL = rTmp.getChannel().lock();
+      // the key block
+      int kl, dl;
+      for (String key : keysList) {
+        kl = key.length();
+        if (cache.containsKey(key)) dl = cache.get(key).length;
+        else dl = sizes.get(key);
+        //
+        bao.write(new byte[] { (byte)(kl / 0x100),
+                               (byte) kl,
+                               (byte)(dl / 0x1000000),
+                               (byte)(dl / 0x10000),
+                               (byte)(dl / 0x100),
+                               (byte) dl
+                             }
+                 );
+        bao.write(key.getBytes(cs));
+      }
+      bao.flush();
+      long pt = 4+bao.size();
+      rTmp.write(new byte[] {(byte)((int)pt / 0x1000000),
+                             (byte)((int)pt / 0x10000),
+                             (byte)((int)pt / 0x100),
+                             (byte) (int)pt
+                            }
+                );
+      rTmp.write(bao.toByteArray());
+      bao.close();
+      // now the data block
+      for (String k : keysList) {
+        byte[] bb = cache.get(k);
+        if (bb == null) {
+          bb = new byte[sizes.get(k)];           
+          raf.seek(pointers.get(k));
+          raf.read(bb);
+        }
+        // save data
+        rTmp.write(bb, 0, bb.length);
+        szs.put(k, bb.length);
+        pts.put(k, pt);
+      }
+      fL.release();
+      rTmp.close();
+      if (existed && !cached) {
+        fLocked.release();
+        raf.close();
+        File fi = new File(dbName);
+        fi.delete(); // delete the old
+        TimeUnit.MICROSECONDS.sleep(20);
+        (new File(tmp)).renameTo(fi);
+        pointers = pts;
+        sizes = szs;
+      } 
+      raf = new RandomAccessFile(dbName, "rw");
+      fLocked = raf.getChannel().lock();
+      committed = false;
+      existed = true;
     }
-    committed = false;
-    existed = true;
     oCache.clear();
-    mod = false;
   }
   //---------------------------------------------------------------------------------------
-  private volatile boolean committed, existed, cached, mod;
-  private ConcurrentHashMap<String, Integer> sizes;
-  private ConcurrentHashMap<String, Long> pointers;
-  private ConcurrentHashMap<String, byte[]> oCache;
-  private ConcurrentHashMap<String, byte[]> cache;
-  private List<String> keysList;
+  private List<String> keysList = Collections.synchronizedList(new ArrayList<String>(512));
+  private ConcurrentHashMap<String, byte[]> oCache =  new ConcurrentHashMap<>(512);
+  private ConcurrentHashMap<String, Long> pointers = new ConcurrentHashMap<>(512);
+  private ConcurrentHashMap<String, Integer> sizes = new ConcurrentHashMap<>(512);
+  private ConcurrentHashMap<String, byte[]> cache = new ConcurrentHashMap<>(512);
+  private volatile boolean committed, existed, cached;
   private RandomAccessFile raf;
   private int limit = 0x200000;
   private FileLock fLocked;
-  private String fName;
+  private String dbName;
   private Charset cs;
 }

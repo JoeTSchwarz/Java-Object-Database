@@ -36,13 +36,14 @@ public class ODBManager implements ODBEventListening {
     else if (limit < 1) limit = 0x100000;      // 1MB
     else limit *= 0x100000;
     //
+    userList = new UserList(map.get("USERLIST"));
     log = map.get("LOGGING").charAt(0) == '1';
     broadcaster =  map.get("MULTICASTING");
     userFile = map.get("USERLIST");
     primary = map.get("PRIMARY");
     //
     userList = new UserList(userFile);
-    webHostName = map.get("WEB_HOST/IP")+":"+primary;
+    webHostName = map.get("WEB_HOST/IP")+"@"+primary;
     listener = new ODBEventListener(broadcaster);
     BC = new ODBBroadcaster(broadcaster);
     listener.addListener(this);
@@ -618,7 +619,7 @@ public class ODBManager implements ODBEventListening {
   }
   /**
   remove a node from cluster
-  @param node String with the format HostName:Port or HostIP:Port
+  @param node String with the format HostName@Port or HostIP@Port
   */
   public synchronized void removeNode(String node) {
     ODBCluster odbc = nodes.remove(node);
@@ -634,7 +635,7 @@ public class ODBManager implements ODBEventListening {
   }
   /**
   joinNode
-  @param node String as hostname:port
+  @param node String as HostName@Port or HostIP@Port
   */
   public synchronized void joinNode(String node) {
     try {
@@ -790,6 +791,7 @@ public class ODBManager implements ODBEventListening {
     dbList.remove(dbName);
   }
   // public data area-----------------------------------------------------------
+  // ODB_Nano only
   public int limit;
   public UserList userList;
   public ODBBroadcaster BC;
