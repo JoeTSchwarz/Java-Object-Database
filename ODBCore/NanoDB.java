@@ -375,7 +375,6 @@ public class NanoDB {
         raf.close();
         File fi = new File(dbName);
         fi.delete(); // delete the old
-        TimeUnit.MICROSECONDS.sleep(20);
         (new File(tmp)).renameTo(fi);
         pointers = pts;
         sizes = szs;

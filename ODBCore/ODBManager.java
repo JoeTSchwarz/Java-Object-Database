@@ -36,16 +36,15 @@ public class ODBManager implements ODBEventListening {
     else if (limit < 1) limit = 0x100000;      // 1MB
     else limit *= 0x100000;
     //
+    broadcaster =  map.get("MULTICASTING").replace(" ","");
+    webHostName = map.get("WEB_HOST/IP").replace(" ","");
     userList = new UserList(map.get("USERLIST"));
     log = map.get("LOGGING").charAt(0) == '1';
-    broadcaster =  map.get("MULTICASTING");
     userFile = map.get("USERLIST");
-    primary = map.get("PRIMARY");
     //
-    userList = new UserList(userFile);
-    webHostName = map.get("WEB_HOST/IP")+"@"+primary;
     listener = new ODBEventListener(broadcaster);
     BC = new ODBBroadcaster(broadcaster);
+    userList = new UserList(userFile);
     listener.addListener(this);
   }
   // ODBEventListening Implementation
@@ -798,7 +797,7 @@ public class ODBManager implements ODBEventListening {
   public OutputStream logger;
   public volatile boolean log;
   public ODBEventListener listener;
-  public String db_path, broadcaster, primary, webHostName, userFile;
+  public String db_path, broadcaster, webHostName, userFile;
   //
   public List<String> uIDList = Collections.synchronizedList(new ArrayList<>());
   public List<String> nodeList = Collections.synchronizedList(new ArrayList<>());

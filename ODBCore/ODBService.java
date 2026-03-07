@@ -21,7 +21,6 @@ public class ODBService {
   */
   public ODBService(String config) throws Exception {
     odbMgr = new ODBManager(config);
-    // launch Broadcaster, Listener, ODBManager and server
     pool = Executors.newFixedThreadPool(8);
     pool.execute(odbMgr.listener);
     pool.execute(odbMgr.BC);
@@ -30,8 +29,9 @@ public class ODBService {
       boolean ok = false;
       try {
         dbSvr = ServerSocketChannel.open();
-        dbSvr.socket().bind(new InetSocketAddress(odbMgr.webHostName.substring(0, odbMgr.webHostName.indexOf(":")),
-                                                  Integer.parseInt(odbMgr.primary)));
+        int p = odbMgr.webHostName.indexOf("@");
+        dbSvr.socket().bind(new InetSocketAddress(odbMgr.webHostName.substring(0, p),
+                                Integer.parseInt(odbMgr.webHostName.substring(p+1))));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
         ok = true; // set OK
         while (true) (new ODBWorker(dbSvr.accept(), odbMgr)).start();
@@ -69,26 +69,26 @@ public class ODBService {
   } 
   /**
   addNode a new node to the cluster ring
-  @param node String with the foemat HostName:Port or HostIP:Port
+  @param node String with the foemat HostName@Port or HostIP@Port
   */
   public void addNode(String node) {
     if (!odbMgr.nodeList.contains(node)) odbMgr.BC.broadcast(6, node, odbMgr.nodeList);
   }
   /**
   removeNode a node from the cluster ring
-  @param node String with the foemat HostName:Port or HostIP:Port
+  @param node String with the foemat HostName@Port or HostIP@Port
   */
   public void removeNode(String node) {
     if (odbMgr.nodeList.contains(node)) odbMgr.BC.broadcast(7, node, odbMgr.nodeList);
   }
   /**
   ping a cluster node
-  @param node String in format HostName:Port or IP:Port (see Config file)
+  @param node String in format HostName@Port or HostIP@Port (see Config file)
   @return long the rounding trip in milliseconds or -1 if Node is unreachable
   */
   public long ping(String node) {
     try {
-      String[] ip = node.split(":");
+      String[] ip = node.split("@");
       if (ip.length == 2) {
         SocketChannel soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
         ByteBuffer buf = ByteBuffer.allocate(32);
