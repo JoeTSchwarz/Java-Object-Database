@@ -749,7 +749,10 @@ public class ODBManager implements ODBEventListening {
       if (log) {
         logging("ODBService is down."+System.lineSeparator());
         logger.close();
-      } else (new File(logName)).delete();
+      } else {
+        logger.close();
+        (new File(logName)).delete();
+      }
       listener.exit(); // stop Listener
       BC.exit(); // stop ODBBroadcaster
     } catch (Exception ex) { }
@@ -807,3 +810,4 @@ public class ODBManager implements ODBEventListening {
   //
   private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> kOwner = new ConcurrentHashMap<>();
 }
+
