@@ -75,13 +75,11 @@ public class ODBManager implements ODBEventListening {
       return;
     case 1: // node up
       joinNode(node);
-      try {
-        Thread.sleep(50);
-      } catch (Exception ex) { }
       BC.broadcast(10, webHostName, nodeList);
       return;
     case 6: // addNode
       joinNode(node);
+      BC.broadcast(2, node, nodeList); // is ready
       return;
     case 10:
       ForkJoinPool.commonPool().execute(()->{
@@ -638,7 +636,6 @@ public class ODBManager implements ODBEventListening {
         if (uID.charAt(0) != '+') odbc.connect("+"+uID+"|"+dbName, charsets.get(dbName));
       }
       nodeList.add(node);
-      BC.broadcast(2, node, nodeList); // is ready
     } catch (Exception ex) {
       BC.broadcast(3, node, Arrays.asList(node+" failed to join Cluster"));
     }
