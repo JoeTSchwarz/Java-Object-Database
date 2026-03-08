@@ -75,6 +75,9 @@ public class ODBManager implements ODBEventListening {
       return;
     case 1: // node up
       joinNode(node);
+      try {
+        Thread.sleep(50);
+      } catch (Exception ex) { }
       BC.broadcast(10, webHostName, nodeList);
       return;
     case 6: // addNode
@@ -105,7 +108,6 @@ public class ODBManager implements ODBEventListening {
       nano.open();
     }
     charsets.put(dbName, cs);
-    dbCommit.put(dbName, autoCom.get(uID) != null);
     if (!dbList.contains(dbName)) dbList.add(dbName);
     if (kOwner.get(dbName) == null) kOwner.put(dbName, new ConcurrentHashMap<String, String>());
     List<String> lst = dbOwner.get(uID);
@@ -141,14 +143,10 @@ public class ODBManager implements ODBEventListening {
   public synchronized void autoCommit(String uID, boolean mode) {
     if (mode) { // set if true, else reset
       autoCom.put(uID, true);
-      List<String> lst = dbOwner.get(uID);
-      if (lst != null) for (String dbName:lst) dbCommit.put(dbName, true);
       if (uID.charAt(0) != '+') // tell all Agents autoommit
         for (ODBCluster odbc:cluster) odbc.autoCommit("+"+uID+"|", true);
     } else {
       autoCom.remove(uID); // set if true, else reset
-      List<String> lst = dbOwner.get(uID);
-      if (lst != null) for (String dbName:lst) dbCommit.remove(dbName);
       if (uID.charAt(0) != '+') // tell all Agents autoommit
         for (ODBCluster odbc:cluster) odbc.autoCommit("+"+uID+"|", false);
     }
@@ -160,14 +158,6 @@ public class ODBManager implements ODBEventListening {
   */
   public synchronized boolean isAutoCommit(String uID) {
     return autoCom.get(uID) != null;
-  }
-  /**
-  getDBCommit
-  @param dbName String
-  @return boolean true: autoCommit
-  */
-  public synchronized boolean getDBCommit(String dbName) {
-    return dbCommit.get(dbName) != null;
   }
   /**
   getCharset()
@@ -793,18 +783,16 @@ public class ODBManager implements ODBEventListening {
   // ODB_Nano only
   public int limit;
   public UserList userList;
-  public ODBBroadcaster BC;
-  public OutputStream logger;
   public volatile boolean log;
-  public ODBEventListener listener;
-  public String db_path, broadcaster, webHostName, userFile;
-  //
-  public List<String> uIDList = Collections.synchronizedList(new ArrayList<>());
-  public List<String> nodeList = Collections.synchronizedList(new ArrayList<>());
-  //
-  public List<ODBWorker> workers = Collections.synchronizedList(new ArrayList<>());
+  public String webHostName, db_path, userFile;
   // private data area-----------------------------------------------------------
-  protected String userID, logName;
+  protected ODBBroadcaster BC;
+  protected OutputStream logger;
+  protected ODBEventListener listener;
+  protected String userID, logName, broadcaster;
+  protected List<String> uIDList = Collections.synchronizedList(new ArrayList<>());
+  protected List<String> nodeList = Collections.synchronizedList(new ArrayList<>());
+  protected List<ODBWorker> workers = Collections.synchronizedList(new ArrayList<>());
   //
   private List<String> dbList = Collections.synchronizedList(new ArrayList<>());
   private List<ODBCluster> cluster = Collections.synchronizedList(new ArrayList<>());
@@ -812,7 +800,6 @@ public class ODBManager implements ODBEventListening {
   private ConcurrentHashMap<String, NanoDB> nanoMap = new ConcurrentHashMap<>();
   //
   private ConcurrentHashMap<String, Boolean> autoCom = new ConcurrentHashMap<>();
-  private ConcurrentHashMap<String, Boolean> dbCommit = new ConcurrentHashMap<>();
   //
   private ConcurrentHashMap<String, String> charsets = new ConcurrentHashMap<>();
   //

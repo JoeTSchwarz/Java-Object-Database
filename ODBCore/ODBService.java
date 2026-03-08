@@ -42,6 +42,7 @@ public class ODBService {
         }
       }
     });
+    Thread.sleep(100); // wait 100 millisecond before broadcast
     odbMgr.BC.broadcast(1, odbMgr.webHostName, odbMgr.nodeList);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
