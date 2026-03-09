@@ -88,11 +88,12 @@ public class ODBConnect {
   }
   /**
   register an ODBEventListening implementation to ODBListener
-  @param odbe Object with implemented ODBEventListening
+  @param odbe Object instance with ODBEventListening implementation
   */
   public void register(ODBEventListening odbe) {
-    if (pool == null) pool = Executors.newFixedThreadPool(4);
-    if (listener == null) { // data[2]: MulticastIP@MulticastPort 
+    if (pool == null) pool = Executors.newFixedThreadPool(128);
+    if (listener == null) {
+      // data[2]: MulticastIP@MulticastPort 
       listener = new ODBEventListener(data[2], odbe);
       pool.execute(listener);
     }
@@ -599,7 +600,6 @@ public class ODBConnect {
       if (pool != null) {
         if (sender != null) sender.exit();
         if (listener != null) listener.exit();
-        TimeUnit.MILLISECONDS.sleep(10);
         pool.shutdownNow();
         pool = null;
       }

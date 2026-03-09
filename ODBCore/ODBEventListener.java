@@ -29,25 +29,31 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 public class ODBEventListener implements Runnable {
   /**
   @param host_port string, HostName@Port or HostIP@Port. Example 224.0.0.3@9990
+  @param odbe ODBEventListening instance
   */
   public ODBEventListener(String host_port, ODBEventListening odbe) {
     ip = ODBParser.split(host_port, "@");
     this.odbe = odbe;
   }
   // called by ODBService
+  /**
+  exit listening
+  */
   public void exit() {
     if (mcs != null) try {
       mcs.close();
       mcs = null;
     } catch (Exception ex) { }
   }
-  //
+  /**
+  run implementation
+  */
   public void run() {
     try {
       mcs = new MulticastSocket(Integer.parseInt(ip[1]));
       mcs.joinGroup(InetAddress.getByName(ip[0]));
-      while (true) {
-        DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
+      while (true) { // 8KB data packet
+        DatagramPacket packet = new DatagramPacket(new byte[8192], 8192);
         mcs.receive(packet); // wait for the incoming msg
         odbe.odbEvent(new ODBEvent(packet));
       }

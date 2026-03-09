@@ -179,7 +179,8 @@ public class ODBService {
   @param odbe ODBEvent implemented App
   */
   public void register(ODBEventListening odbe) {
-    pool.execute(new ODBEventListener(odbMgr.broadcaster, odbe));
+    svrListener = new ODBEventListener(odbMgr.broadcaster, odbe);
+    pool.execute(svrListener);
   }
   /**
   broadcast() a message (superuser)
@@ -224,11 +225,13 @@ public class ODBService {
   public void shutdown() {
     try {
       odbMgr.shutdown( );
+      svrListener.exit();
       dbSvr.close();
     } catch (Exception ex) { }
     pool.shutdownNow(); // close Pool
   }
   //
+  private ODBEventListener svrListener;
   private ServerSocketChannel dbSvr;
   private ExecutorService pool;
   private ODBManager odbMgr;
