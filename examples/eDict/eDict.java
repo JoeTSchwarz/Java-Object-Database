@@ -33,7 +33,7 @@ public class eDict extends Application implements ODBEventListening {
     try {
       int port = Integer.parseInt(pl.get(3));
       oOD = new eOpenDict(pl.get(0),pl.get(1), pl.get(2), port);
-      host_port = pl.get(2)+":"+port;
+      host_port = pl.get(2)+"@"+port;
       oOD.getKeys();
     } catch (Exception ex) {
       ex.printStackTrace();
