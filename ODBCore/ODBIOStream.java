@@ -152,15 +152,10 @@ public class ODBIOStream {
   @exception IOException thrown by JAVA
   */
   public void write(SocketChannel soc) throws IOException {
-    if (pos < 1024) soc.write(ByteBuffer.wrap(buf, 0, pos));
-    else { // too big GZIP the content before send
-      ByteArrayOutputStream bao = new ByteArrayOutputStream(pos);
-      GZIPOutputStream go = new GZIPOutputStream(bao, true);
-      go.write(buf, 0, pos);
-      go.flush();
-      go.close();
-      soc.write(ByteBuffer.wrap(bao.toByteArray()));
-    }
+    ByteBuffer bbuf = ByteBuffer.allocate(pos+4);
+    bbuf.putInt(pos);
+    bbuf.put(buf, 0, pos);
+    soc.write(bbuf.flip());  
   }
   /*
   Use for Receive (ODBConnect/ODBCluster) and send (ODBWorker).Formatted Input/Output 0-17+lengths, 
@@ -363,25 +358,17 @@ public class ODBIOStream {
   @exception Exception thrown by JAVA
   */
   public void read(SocketChannel soc) throws Exception {
-    ByteBuffer bbuf = ByteBuffer.allocate(65536);
-    int le = 0; pos = 0;
-    do {
+    ByteBuffer bbuf = ByteBuffer.allocate(65536);    
+    int le = soc.read(bbuf) - 4;
+    int len = bbuf.flip().getInt();
+    if (len >= MAX) enlarge(len);
+    bbuf.get(buf, 0, le);
+    pos = le;
+    while (pos < len) {
       bbuf.clear();
       le = soc.read(bbuf);
-      if ((pos+le) >= MAX) enlarge(le);
       bbuf.flip().get(buf, pos, le);
       pos += le;
-    } while (le >= 65536);
-    if (buf[0] == (byte)0x1F && buf[1] == (byte)0x8B &&  buf[2] == (byte)0x08) {
-      GZIPInputStream gi = new GZIPInputStream(new ODBInputStream(buf, 0, pos));
-      pos = 0; // reset starting position
-      byte bb[] = new byte[65536]; // 64KB
-      for (le = gi.read(bb); le > 0; le = gi.read(bb)) {
-        if ((pos+le) >= MAX) enlarge((le));
-        System.arraycopy(bb, 0, buf, pos, le);
-        pos += le;
-      }
-      gi.close();
     }
   }
   /**

@@ -87,24 +87,15 @@ public class ODBConnect {
     return dbLst;
   }
   /**
-  add an ODBEventListening implementation to ODBListener
-  @param odbe Object with implemented ODBEventListening
-  */
-  public void addEvent(ODBEventListening odbe) {
-    listener.addListener(odbe);
-  }
-  /**
   register an ODBEventListening implementation to ODBListener
   @param odbe Object with implemented ODBEventListening
   */
   public void register(ODBEventListening odbe) {
-    if (pool == null) pool = Executors.newFixedThreadPool(128);
-    if (listener == null) {
-      // data[2]: MulticastIP:MulticastPort 
-      listener = new ODBEventListener(data[2]);
+    if (pool == null) pool = Executors.newFixedThreadPool(4);
+    if (listener == null) { // data[2]: MulticastIP@MulticastPort 
+      listener = new ODBEventListener(data[2], odbe);
       pool.execute(listener);
     }
-    listener.addListener(odbe);
   }
   /**
   getKeys() returns all keys of dbName

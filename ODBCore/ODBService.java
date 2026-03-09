@@ -33,17 +33,18 @@ public class ODBService {
         dbSvr.socket().bind(new InetSocketAddress(odbMgr.webHostName.substring(0, p),
                                 Integer.parseInt(odbMgr.webHostName.substring(p+1))));
         dbSvr.setOption(StandardSocketOptions.SO_RCVBUF, 65536);
-        ok = true; // set OK
+        ok = true; // set OK and broadcast Server is up
+        odbMgr.BC.broadcast(1, odbMgr.webHostName, odbMgr.nodeList);
+        // waiting for clients....
         while (true) (new ODBWorker(dbSvr.accept(), odbMgr)).start();
       } catch (Exception e) {
-        if (!ok) { // something wrong with dbSvr: hostName  Port?
+        if (!ok) { // something wrong with dbSvr: hostName/IP or Port?
           System.err.println("Cannot start ODB Server. Pls. check: "+odbMgr.webHostName);
+          pool.shutdownNow();
           System.exit(0);
         }
       }
     });
-    Thread.sleep(100); // wait 100 millisecond before broadcast
-    odbMgr.BC.broadcast(1, odbMgr.webHostName, odbMgr.nodeList);
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {
         if (dbSvr != null) shutdown( );
@@ -178,7 +179,7 @@ public class ODBService {
   @param odbe ODBEvent implemented App
   */
   public void register(ODBEventListening odbe) {
-    odbMgr.listener.addListener(odbe);
+    pool.execute(new ODBEventListener(odbMgr.broadcaster, odbe));
   }
   /**
   broadcast() a message (superuser)

@@ -42,10 +42,9 @@ public class ODBManager implements ODBEventListening {
     log = map.get("LOGGING").charAt(0) == '1';
     userFile = map.get("USERLIST");
     //
-    listener = new ODBEventListener(broadcaster);
+    listener = new ODBEventListener(broadcaster, this);
     BC = new ODBBroadcaster(broadcaster);
     userList = new UserList(userFile);
-    listener.addListener(this);
   }
   // ODBEventListening Implementation
   // Check only for 
@@ -741,6 +740,7 @@ public class ODBManager implements ODBEventListening {
     try {
       // broadcast this webHostName node is down
       BC.broadcast(0, webHostName, nodeList);
+      Thread.sleep(100); // wait 100 mSec.
       for (String uID:uIDList) {
         for (ODBCluster odbc:cluster) odbc.disconnect("+"+uID+"|");
         removeAgent(uID);
@@ -810,4 +810,3 @@ public class ODBManager implements ODBEventListening {
   //
   private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> kOwner = new ConcurrentHashMap<>();
 }
-

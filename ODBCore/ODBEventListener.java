@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 // as an implementation of ODBEventListening
 /**
 Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes message, n bytes list of nodes (cluster)
-<br>owner: String. HostName:PortNumber or HostIP:Port and msg can be a node (like owner) or any String
+<br>owner: String. HostName@Port or HostIP@Port and msg can be a node (like owner) or any String
 <br>0:  Node down (offline). Format: 0, node, list&lt;talternative JODB&gt;
 <br>1:  Node up (online). Format: 1, node, list&lt;alternative JODB&gt;
 <br>2:  Node ready- Format: 2, node, list&lt;alternative JODB&gt;
@@ -28,22 +28,11 @@ Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes messa
 */
 public class ODBEventListener implements Runnable {
   /**
-  @param host_port string containing MultiCast IP and port. Example 224.0.0.3:9990
+  @param host_port string, HostName@Port or HostIP@Port. Example 224.0.0.3@9990
   */
-  public ODBEventListener(String host_port) {
-    ip = ODBParser.split(host_port, ":");
-  }
-  /**
-  @param odbe an implemented ODBListening object
-  */
-  public void addListener(ODBEventListening odbe) {
-    if (!set.contains(odbe)) set.add(odbe);
-  }
-  /**
-  @param odbe an implemented ODBListening object
-  */
-  public void removeListener(ODBEventListening odbe) {
-    set.remove(odbe);
+  public ODBEventListener(String host_port, ODBEventListening odbe) {
+    ip = ODBParser.split(host_port, "@");
+    this.odbe = odbe;
   }
   // called by ODBService
   public void exit() {
@@ -60,13 +49,12 @@ public class ODBEventListener implements Runnable {
       while (true) {
         DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
         mcs.receive(packet); // wait for the incoming msg
-        ODBEvent event = new ODBEvent(packet);
-        for (ODBEventListening odbe : set) odbe.odbEvent(event);
+        odbe.odbEvent(new ODBEvent(packet));
       }
     } catch (Exception ex) { }
     exit();
   }
   private String ip[];
   private MulticastSocket mcs;
-  private volatile Set<ODBEventListening> set = new CopyOnWriteArraySet<ODBEventListening>( );
+  private ODBEventListening odbe;
 }
