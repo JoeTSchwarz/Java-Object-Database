@@ -9,7 +9,7 @@ import java.nio.channels.*;
 import java.util.concurrent.*;
 /**
 Message format: Owner_Msg_List. Cmd (Type): 1 byte. n bytes owner, n bytes message, n bytes list of nodes (cluster)
-<br>owner: String. HostName:PortNumber or HostIP:Port and msg can be a node (like owner) or any String
+<br>owner: String. HHostName@Port or HostIP@Port and msg can be a node (like owner) or any String
 <br>0:  Node down (offline). Format: 0, node, list&lt;alternative JODB&gt;
 <br>1:  Node up (online). Format: 1, node, list&lt;alternative JODB&gt;
 <br>2:  Node ready- Format: 2, node, list&lt;alternative JODB&gt;
@@ -40,7 +40,6 @@ public class ODBEvent {
       nodes = null;
       node = null;
     } else {
-      //nodes = ODBParser.split((new String(buf, 1, packet.getLength()-1)), ""+(char)0x01);
       String msg = new String(buf, 1, packet.getLength()-1);
       nodes = msg.split(""+(char)0x01);
       message = nodes[1];
@@ -49,7 +48,7 @@ public class ODBEvent {
   }
   /**
   getNodes
-  @return String array containing all online nodes (format: hostName/IP:Port)
+  @return String array containing all online nodes (format: hostName/IP@Port)
   */
   public String[] getNodes() {
     return nodes;
@@ -70,7 +69,7 @@ public class ODBEvent {
   }
   /**
   getActiveNode
-  @return String, the running node (Host:Port)
+  @return String, the running node (Host@Port)
   */
   public String getActiveNode() {
     return node;
@@ -84,7 +83,7 @@ public class ODBEvent {
   */
   public ODBConnect onEvent(String pw, String uid, List<String> dbList) {
     for (int i = 1; i < nodes.length; ++i) if (!nodes[i].equals(node)) try {
-      String[] ip =  ODBParser.split(nodes[i], ":");
+      String[] ip =  ODBParser.split(nodes[i], "@");
       ODBConnect odbc = new ODBConnect(ip[0], Integer.parseInt(ip[1]), pw, uid);
       // connect to the alternative node. Ignore *
       for (String dbName : dbList) try {
