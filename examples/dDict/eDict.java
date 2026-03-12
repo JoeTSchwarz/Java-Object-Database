@@ -187,13 +187,13 @@ public class eDict extends Application implements ODBEventListening {
   // 11: user add/delete/update (only if ODBConnect.notify(dbName) is set)
   public void odbEvent(ODBEvent event) {
     Platform.runLater(() -> {
-      int type = event.getEventType();
       String node = event.getActiveNode();
+      int type = event.getEventType();
       String msg = event.getMessage();
-      switch (type) {
-        case 9: // forcedClose
-        if (!msg.equals(dict.odb)) return;
-        case 0: // down
+      switch(type) {
+      case 9: // forcedClose
+        if (!dict.odb.equals(msg)) return;
+      case 0: // down
         if (host_port.equals(node)) {
           Alert alert = new Alert(AlertType.CONFIRMATION);
           addCSS(alert);
@@ -217,27 +217,30 @@ public class eDict extends Application implements ODBEventListening {
           if (type == 0) txtArea.setText(node+" is down.\n");
           else txtArea.setText("On "+node+": "+msg+" was forced to close.\n");
           txtArea.appendText("Switch to "+host_port+"\nKeyList AutoRefresh.\n");
+        } else {
+          if (type == 0) txtArea.setText(node+" is down.\nKeyList AutoUpdate.\n");
+          else txtArea.setText("On "+node+":"+msg+" is forced to clsoe.\nKeyList AutoUpdate.\n");
         }
-        case 5: // removeNode internal
-        refresh(node+" is down or removed from Cluster.");
-        return;
-        case 2:
-          refresh(msg+" is online.");
-          return;
-        case 4: // forcedFreeKey/, etc.
+        break;
+      case 2: // node ready
+        txtArea.setText(node+" joins Cluster. KeyList AutoUpdate.\n");
+        break;
+      case 4: // forcedFreeKey, forcedRollabck, etc.
         txtArea.setText("On local "+node+": "+msg+"\n");
-        return;
-        case 7: // removeNode superUser
-        if (!host_port.equals(node)) refresh(node+" is removed from cluster.");
-        return;
-        case 6:  // addNode
-        refresh(msg+" joins Cluster.");
-        return;
-        case 11: // user add/delete/update
-        int p = node.indexOf("|"); // uID|dbName
-        if (p > 0 && !dict.getUserID().equals(node.substring(0, p)) && dict.odb.equals(node.substring(p+1))) refresh(msg);
-        return;
+        break;
+      case 5: // remove node
+      case 8: // removeNode (super User
+        txtArea.setText(node+" leaves Cluster. KeyList AutoUpdate.\n");
+        break;
+      case 1:  // up
+      case 6:  // addNode
+        txtArea.setText(node+" joins Cluster.\n");
+        break;
+      default: return;
       }
+      dict.getKeys();
+      if (dict.words != null && dict.words.size() > 0) dic.setAll(dict.words);
+      else dic.clear();
     });
   }
   //
