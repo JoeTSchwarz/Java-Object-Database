@@ -44,7 +44,7 @@ public class ODBWorker extends Thread {
     ArrayList<byte[]> aLst = new ArrayList<>();
     ArrayList<String> notify = new ArrayList<>();
     // loop until JODB server exits
-    while (true) {
+    while (soc != null) {
       try {
         ios.read(soc); // read the content from soc to ios
         ois = new ODBInputStream(ios.toByteArray());
@@ -85,9 +85,9 @@ public class ODBWorker extends Thread {
           break;
         case 2: // disconnect ODBConnect
           try {
+            odbMgr.removeClient(uID);
             odbMgr.unbindAgent('+'+uID+'|');
-            if (priv > 0) odbMgr.removeClient(uID);
-            else odbMgr.close(uID);
+            if (priv == 0)  odbMgr.close(uID);
             ios.write(soc);
           } catch (Exception ex) { }
           odbMgr.uIDList.remove(uID);
@@ -287,11 +287,10 @@ public class ODBWorker extends Thread {
           ios.writeList(odbMgr.lockedKeyList(uID, dbName));
           break;
         case 31: // changePassword(oldPW, newPW) Client Change Password
-          UserList uList = new UserList(odbMgr.userlist);
-          ios.writeBool(uList.changePassword(uid,
+          ios.writeBool(odbMgr.userList.changePassword(uid,
                         EnDecrypt.decrypt(dbName),
                         EnDecrypt.decrypt(ois.readToken( ))));
-          uList.save();
+          odbMgr.userList.save();
           if (uID.charAt(0) != '+' && odbMgr.log) odbMgr.logging(uID+" changes Password.");
           break;
         //------------------------extended DataMining----------------------------
@@ -401,7 +400,9 @@ public class ODBWorker extends Thread {
           odbMgr.removeAgent(uID);
           break;
         case 99: // ping()
-          soc.write(ByteBuffer.wrap((""+System.currentTimeMillis()).getBytes()));
+          ByteBuffer bbuf = ByteBuffer.allocate(32);
+          bbuf.putLong(System.currentTimeMillis());
+          soc.write(bbuf.flip());
           exit();
           return;
         default:
@@ -432,22 +433,19 @@ public class ODBWorker extends Thread {
       soc.shutdownInput();
       soc.shutdownOutput();
       soc.close();
-      soc = null;
     } catch (Exception e) { }
+    soc = null;
   }
   // User authentication for ODBConnect
   private String authenticate(String encrypt) throws Exception {
     if (uID != null) return null; // already authenticated
-    if (!odbMgr.userlist.endsWith("userlist")) return "Missing \"userlist\".";
-    //
-    UserList uList = new UserList(odbMgr.userlist);
     String u = EnDecrypt.decrypt(encrypt.substring(0, encrypt.indexOf("@")));
     if ("system:admin".equals(u)) return "\"admin\" is not allowed here.";
     int idx = u.indexOf(":");
     String pw  = u.substring(0, idx);
     uid = u.substring(idx+1);
-    if (uList.isUser(pw, uid)) {
-      priv = uList.getPrivilege(pw, uid);
+    if (odbMgr.userList.isUser(pw, uid)) {
+      priv = odbMgr.userList.getPrivilege(pw, uid);
       uID = uid+"@"+String.format("%X", System.nanoTime());
       if (odbMgr.log) odbMgr.logging("User "+uid+" successfully signs in. Assigned ID: "+uID);
       return null;

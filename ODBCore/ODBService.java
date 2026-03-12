@@ -93,18 +93,20 @@ public class ODBService {
       String[] ip = node.split("@");
       if (ip.length == 2) {
         SocketChannel soc = SocketChannel.open(new InetSocketAddress(ip[0], Integer.parseInt(ip[1])));
-        ByteBuffer buf = ByteBuffer.allocate(32);
+        ByteBuffer bbuf = ByteBuffer.allocate(32);
         ODBIOStream ios = new ODBIOStream();
         // send(99, "*")
-        ios.writeInt((99<<24)+0x100+0x58);
+        ios.write(99);
+        ios.writeToken("*");        
         long beg = System.currentTimeMillis();
-        soc.write(ByteBuffer.wrap(ios.toByteArray()));
-        int p = soc.read(buf); // wait for the reply from the node
-        beg = Long.parseLong(new String(buf.array(), 0, p)) - beg;
-        soc.shutdownInput();
+        ios.write(soc);
+        // wait for the reply from the node
+        int p = soc.read(bbuf);
+        long end = bbuf.flip().getLong();
         soc.shutdownOutput();
+        soc.shutdownInput();
         soc.close();
-        return beg;
+        return (end-beg);
       }
     } catch (Exception ex) { }
     return -1;
