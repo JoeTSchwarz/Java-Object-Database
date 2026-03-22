@@ -35,11 +35,10 @@ public class ODBConnect {
     ios.getSoc(soc); // read the content from soc
     if (!ios.readBool()) {
       close();
-      throw new Exception("Unable to connect to:"+dbHost+":"+port+". Check your Password/ID.");
+      throw new Exception("Unable to connect to:"+dbHost+"@"+port+". Check your Password/ID.");
     }
     // data[0]: privilege, data[1]: userID, data[2]: MulticastIP:MulticastPort 
     data = ODBParser.split(ios.readMsg(), "/");
-    //data = ios.readMsg().split("/");
     priv = Integer.parseInt(data[0]);
     // start Shutdown listener
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -197,7 +196,6 @@ public class ODBConnect {
     send(dbName, 10, key);
     byte[] bb = ios.readObj();
     if (bb[0] == (byte)0xAC && bb[1] == (byte)0xED) { // serialized object
-      //ObjectInputStream oi = new ObjectInputStream(new ByteArrayInputStream(bb));
       ObjectInputStream oi = new ObjectInputStream(new ODBInputStream(bb));
       Object obj = oi.readObject();
       oi.close();
